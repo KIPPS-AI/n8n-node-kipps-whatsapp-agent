@@ -36,7 +36,7 @@
 
   "n8n": {
     "nodes": [
-      "dist/nodes/KippsAiWhatsapp/KippsAiWhatsapp.node.js"
+      "dist/nodes/KippsAiWhatsappAgent/KippsAiWhatsappAgent.node.js"
     ],
     "credentials": [
       "dist/credentials/KippsAiApi.credentials.js"

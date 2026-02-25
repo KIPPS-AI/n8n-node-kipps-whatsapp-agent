@@ -31,8 +31,8 @@ export class KippsAiWhatsapp implements INodeType {
 
 		properties: [
 			{
-				displayName: 'Phone Number',
-				name: 'phoneNumber',
+				displayName: 'To',
+				name: 'to',
 				type: 'string',
 				default: '',
 				placeholder: '+919876543210',
@@ -56,6 +56,18 @@ export class KippsAiWhatsapp implements INodeType {
 				description:
 					'For {{name}} template → [{ "name": "industry", "value": "IT" }] \nFor {{1}} template → ["John", "Order123"]',
 			},
+			{
+				displayName: 'Agent UUID',
+				name: 'agent_uuid',
+				type: 'string',
+				default: '',
+			},
+			{
+				displayName: 'Conversation ID',
+				name: 'conversation_id',
+				type: 'string',
+				default: '',
+			},
 		],
 	};
 
@@ -64,17 +76,21 @@ export class KippsAiWhatsapp implements INodeType {
 		const returnData: INodeExecutionData[] = [];
 
 		for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
-			const phoneNumber = this.getNodeParameter('phoneNumber', itemIndex) as string;
+			const to = this.getNodeParameter('to', itemIndex) as string;
 			const templateName = this.getNodeParameter('templateName', itemIndex) as string;
 			const parameters = this.getNodeParameter('parameters', itemIndex) as object;
+			const agent_uuid = this.getNodeParameter('agent_uuid', itemIndex, '') as string;
+			const conversation_id = this.getNodeParameter('conversation_id', itemIndex, '') as string;
 
 			const endpoint = 'https://backend.kipps.ai/integrations/whatsapp-agent/send-template/';
 			const method: IHttpRequestMethods = 'POST';
 
 			const body = {
-				to: phoneNumber,
+				to,
 				template_name: templateName,
-				parameters: parameters,
+				parameters,
+				agent_uuid,
+				conversation_id,
 			};
 
 			try {
