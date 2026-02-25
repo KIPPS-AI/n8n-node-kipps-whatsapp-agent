@@ -11,21 +11,30 @@ export class KippsAiApi implements ICredentialType {
 	displayName = 'Kipps.AI API';
 
 	// change icon to whatsapp-related node icon if you have one
-	icon = 'file:../nodes/KippsWhatsappAgent/whatsapp.svg' as Icon;
+	icon = 'file:../nodes/KippsAiWhatsappAgent/whatsapp.svg' as Icon;
 
 	documentationUrl = 'https://docs.kipps.ai/docs/v1.2.2/developer-api';
 
 	properties: INodeProperties[] = [
 		{
-			displayName: 'API Key',
-			name: 'apiKey',
+			displayName: 'Bearer Token',
+			name: 'bearerToken',
 			type: 'string',
 			typeOptions: {
 				password: true,
 			},
 			default: '',
-			placeholder: 'Enter your Kipps API Key',
-			description: 'API key from Kipps.AI dashboard',
+			placeholder: 'Enter your Bearer token',
+			description: 'Bearer token from Kipps.AI dashboard',
+		},
+		{
+			displayName: 'Organization ID',
+			name: 'organizationId',
+			type: 'string',
+			default: '',
+			placeholder: 'bb51f8ad-4ee8-40cf-98aa-64b9c4b3eae9',
+			description: 'Organization UUID from Kipps.AI dashboard',
+			required: true,
 		},
 	];
 
@@ -33,7 +42,8 @@ export class KippsAiApi implements ICredentialType {
 		type: 'generic',
 		properties: {
 			headers: {
-				Authorization: '=Api-Key {{$credentials.apiKey}}',
+				Authorization: '=Bearer {{$credentials.bearerToken}}',
+				'X-Organization-ID': '={{$credentials.organizationId}}',
 			},
 		},
 	};

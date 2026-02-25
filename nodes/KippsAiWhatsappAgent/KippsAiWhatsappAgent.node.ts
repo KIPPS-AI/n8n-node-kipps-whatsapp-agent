@@ -51,10 +51,19 @@ export class KippsAiWhatsapp implements INodeType {
 				displayName: 'Parameters (JSON)',
 				name: 'parameters',
 				type: 'json',
-				default: '[]',
+				default: '{}',
 				required: true,
 				description:
-					'For {{name}} template → [{ "name": "industry", "value": "IT" }] \nFor {{1}} template → ["John", "Order123"]',
+					'For NAMED template ({{name}}): {"body": [{"name": "industry", "value": "IT"}]} \nFor POSITIONAL template ({{1}}): {"body": ["John", "Order123"]}',
+			},
+			{
+				displayName: 'Template Components (JSON)',
+				name: 'template_components',
+				type: 'json',
+				default: '[]',
+				required: false,
+				description:
+					'Optional: Template components array. If not provided, will be fetched automatically.',
 			},
 			{
 				displayName: 'Agent UUID',
@@ -81,17 +90,35 @@ export class KippsAiWhatsapp implements INodeType {
 			const parameters = this.getNodeParameter('parameters', itemIndex) as object;
 			const agent_uuid = this.getNodeParameter('agent_uuid', itemIndex, '') as string;
 			const conversation_id = this.getNodeParameter('conversation_id', itemIndex, '') as string;
+			const template_components = this.getNodeParameter('template_components', itemIndex, null) as
+				| unknown[]
+				| null;
 
 			const endpoint = 'https://backend.kipps.ai/integrations/whatsapp-agent/send-template/';
 			const method: IHttpRequestMethods = 'POST';
 
-			const body = {
+			const body: {
+				to: string;
+				template_name: string;
+				parameters: object;
+				agent_uuid?: string;
+				conversation_id?: string;
+				template_components?: unknown[];
+			} = {
 				to,
 				template_name: templateName,
 				parameters,
-				agent_uuid,
-				conversation_id,
 			};
+
+			if (agent_uuid) {
+				body.agent_uuid = agent_uuid;
+			}
+			if (conversation_id) {
+				body.conversation_id = conversation_id;
+			}
+			if (template_components) {
+				body.template_components = template_components;
+			}
 
 			try {
 				this.logger.debug('===== Kipps WhatsApp REQUEST =====');
@@ -139,4 +166,5 @@ export class KippsAiWhatsapp implements INodeType {
 
 		return this.prepareOutputData(returnData);
 	}
+}
 }
