@@ -72,7 +72,7 @@ export class KippsAiWhatsapp implements INodeType {
 			const method: IHttpRequestMethods = 'POST';
 
 			const body = {
-				phone_number: phoneNumber,
+				to: phoneNumber,
 				template_name: templateName,
 				parameters: parameters,
 			};
