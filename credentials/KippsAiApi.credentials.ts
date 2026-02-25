@@ -1,10 +1,10 @@
-import {
+import type {
 	ICredentialType,
 	INodeProperties,
 	IAuthenticateGeneric,
 	ICredentialTestRequest,
+	Icon,
 } from 'n8n-workflow';
-import type { Icon } from 'n8n-workflow';
 
 export class KippsAiApi implements ICredentialType {
 	name = 'kippsAiApi';

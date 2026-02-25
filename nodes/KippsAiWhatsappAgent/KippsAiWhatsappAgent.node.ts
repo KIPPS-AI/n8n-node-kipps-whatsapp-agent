@@ -1,11 +1,11 @@
-import {
+import type {
 	IExecuteFunctions,
 	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
-	NodeOperationError,
 	IHttpRequestMethods,
 } from 'n8n-workflow';
+import { NodeOperationError } from 'n8n-workflow';
 
 export class KippsAiWhatsapp implements INodeType {
 	description: INodeTypeDescription = {
@@ -166,5 +166,4 @@ export class KippsAiWhatsapp implements INodeType {
 
 		return this.prepareOutputData(returnData);
 	}
-}
 }
