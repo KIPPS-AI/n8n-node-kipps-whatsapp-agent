@@ -50,7 +50,8 @@ export class KippsAiApi implements ICredentialType {
 
 	test: ICredentialTestRequest = {
 		request: {
-			url: 'https://backend.kipps.ai/test/',
+			// url: 'https://backend.kipps.ai/test/',
+			url : "https://backend.kipps.ai/integrations/get-whatsapp-templates/",
 		},
 	};
 }
