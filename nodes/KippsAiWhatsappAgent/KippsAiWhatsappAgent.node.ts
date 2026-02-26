@@ -156,18 +156,9 @@ export class KippsAiWhatsappAgent implements INodeType {
 				if (!template_components || !Array.isArray(template_components) || template_components.length === 0) {
 					template_components = templateData.components || [];
 				}
-
-				this.logger.debug(
-					`Kipps WhatsApp: Selected template "${templateName}" with components count: ${
-						Array.isArray(template_components) ? template_components.length : 0
-					}`,
-				);
 			} catch {
 				// Fallback: if value is just a string (old format), use it as template name
 				templateName = templateNameParam;
-				this.logger.debug(
-					`Kipps WhatsApp: Using template name as plain string "${templateName}" (no template metadata available).`,
-				);
 			}
 
 			// Validate components
@@ -203,11 +194,6 @@ export class KippsAiWhatsappAgent implements INodeType {
 			}
 
 			try {
-				this.logger.debug(
-					`Kipps WhatsApp: Final request payload → to="${body.to}", template="${body.template_name}", components=${
-						Array.isArray(body.template_components) ? body.template_components.length : 0
-					}, hasParams=${Object.keys(body.parameters || {}).length > 0}`,
-				);
 				this.logger.debug('===== Kipps WhatsApp REQUEST =====');
 				this.logger.debug(`Endpoint: ${endpoint}`);
 				this.logger.debug(`Body: ${JSON.stringify(body)}`);
