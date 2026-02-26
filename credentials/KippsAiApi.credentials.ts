@@ -50,7 +50,6 @@ export class KippsAiApi implements ICredentialType {
 
 	test: ICredentialTestRequest = {
 		request: {
-			// use a real working endpoint for validation
 			url: 'https://backend.kipps.ai/test/',
 		},
 	};

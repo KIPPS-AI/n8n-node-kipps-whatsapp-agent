@@ -77,7 +77,7 @@ The node is **super simple** - just 3 steps:
 
 1. **To** (Phone Number)
    - Enter recipient phone number
-   - Format: E.164 format (e.g., `918520811855` or `+919876543210`)
+   - Format: `91XXXXXXXXXX` (country code 91 + number, digits only)
    - Required: ✅ Yes
 
 2. **Template** (Dropdown)
@@ -179,7 +179,7 @@ Or simply:
 ### Example 1: Send Simple Template (No Parameters)
 
 **Node Configuration:**
-- **To**: `918520811855`
+- **To**: `91XXXXXXXXXX`
 - **Template**: Select `real_estate_webinar` from dropdown
 - **Template Components**: ✅ Auto-filled (visible for verification)
 - **Parameters**: `{"body": []}`
@@ -198,7 +198,7 @@ Or simply:
 ### Example 2: Send NAMED Template
 
 **Node Configuration:**
-- **To**: `918520811855`
+- **To**: `91XXXXXXXXXX`
 - **Template**: Select `aha_smart_homes` from dropdown
 - **Template Components**: ✅ Auto-filled (visible for verification)
 - **Parameters**: 
@@ -217,7 +217,7 @@ Or simply:
 ### Example 3: Send POSITIONAL Template
 
 **Node Configuration:**
-- **To**: `918520811855`
+- **To**: `91XXXXXXXXXX`
 - **Template**: Select `aha_homes_consultation` from dropdown
 - **Template Components**: ✅ Auto-filled (visible for verification)
 - **Parameters**: 
@@ -377,7 +377,7 @@ POST https://backend.kipps.ai/integrations/whatsapp-agent/send-template/
 
 ```json
 {
-  "to": "918520811855",
+  "to": "91XXXXXXXXXX",
   "template_name": "real_estate_webinar",
   "parameters": {
     "body": []

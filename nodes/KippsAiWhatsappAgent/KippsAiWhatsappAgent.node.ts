@@ -9,7 +9,7 @@ import type {
 } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
 
-export class KippsAiWhatsapp implements INodeType {
+export class KippsAiWhatsappAgent implements INodeType {
 	methods = {
 		loadOptions: {
 			async getTemplates(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
@@ -62,9 +62,9 @@ export class KippsAiWhatsapp implements INodeType {
 				name: 'to',
 				type: 'string',
 				default: '',
-				placeholder: '+919876543210',
+				placeholder: '91XXXXXXXXXX',
 				required: true,
-				description: 'Recipient phone number in E.164 format',
+				description: 'Recipient phone number in format 91XXXXXXXXXX (country code 91 + number, digits only)',
 			},
 			{
 				displayName: 'Template',
