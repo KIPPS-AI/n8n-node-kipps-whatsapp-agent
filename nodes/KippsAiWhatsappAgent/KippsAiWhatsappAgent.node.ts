@@ -61,9 +61,9 @@ export class KippsAiWhatsapp implements INodeType {
 				name: 'template_components',
 				type: 'json',
 				default: '[]',
-				required: false,
+				required: true,
 				description:
-					'Optional: Template components array. If not provided, will be fetched automatically.',
+					'Required: Template components array from the template. Get this from the template details when fetching templates list. Example: [{"type": "BODY", "text": "Your message text"}]',
 			},
 			{
 				displayName: 'Agent UUID',
@@ -90,9 +90,7 @@ export class KippsAiWhatsapp implements INodeType {
 			const parameters = this.getNodeParameter('parameters', itemIndex) as object;
 			const agent_uuid = this.getNodeParameter('agent_uuid', itemIndex, '') as string;
 			const conversation_id = this.getNodeParameter('conversation_id', itemIndex, '') as string;
-			const template_components = this.getNodeParameter('template_components', itemIndex, null) as
-				| unknown[]
-				| null;
+			const template_components = this.getNodeParameter('template_components', itemIndex) as unknown[];
 
 			const endpoint = 'https://backend.kipps.ai/integrations/whatsapp-agent/send-template/';
 			const method: IHttpRequestMethods = 'POST';
@@ -101,13 +99,14 @@ export class KippsAiWhatsapp implements INodeType {
 				to: string;
 				template_name: string;
 				parameters: object;
+				template_components: unknown[];
 				agent_uuid?: string;
 				conversation_id?: string;
-				template_components?: unknown[];
 			} = {
 				to,
 				template_name: templateName,
 				parameters,
+				template_components,
 			};
 
 			if (agent_uuid) {
@@ -115,9 +114,6 @@ export class KippsAiWhatsapp implements INodeType {
 			}
 			if (conversation_id) {
 				body.conversation_id = conversation_id;
-			}
-			if (template_components) {
-				body.template_components = template_components;
 			}
 
 			try {
