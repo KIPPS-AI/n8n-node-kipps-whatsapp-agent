@@ -1,36 +1,94 @@
 import type {
 	IExecuteFunctions,
+	ILoadOptionsFunctions,
 	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
 	IHttpRequestMethods,
-	ILoadOptionsFunctions,
 	INodePropertyOptions,
+	ResourceMapperFields,
 } from 'n8n-workflow';
+
 import { NodeOperationError } from 'n8n-workflow';
 
 export class KippsAiWhatsappAgent implements INodeType {
+
 	methods = {
 		loadOptions: {
 			async getTemplates(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
-				const endpoint = 'https://backend.kipps.ai/integrations/get-whatsapp-templates/';
-				const method: IHttpRequestMethods = 'GET';
+				const res = await this.helpers.httpRequestWithAuthentication.call(
+					this,
+					'kippsAiApi',
+					{
+						method: 'GET',
+						url: 'https://backend.kipps.ai/integrations/get-whatsapp-templates/',
+					},
+				);
 
-				const response = await this.helpers.httpRequestWithAuthentication.call(this, 'kippsAiApi', {
-					method,
-					url: endpoint,
-					headers: { 'Content-Type': 'application/json' },
-				});
-
-				const templates = Array.isArray(response) ? response : [];
-
-				// Store full template data in value (as JSON string) to avoid fetching again
-				return templates
-					.filter((t: any) => t?.name)
+				return (res || [])
+					.filter((t: any) => t?.status === 'APPROVED')
 					.map((t: any) => ({
 						name: String(t.name),
-						value: JSON.stringify(t), // Store full template object
+						value: JSON.stringify(t),
 					}));
+			},
+		},
+		resourceMapping: {
+			async getTemplateFields(this: ILoadOptionsFunctions): Promise<ResourceMapperFields> {
+				const templateRaw = this.getCurrentNodeParameter('templateName') as string;
+				if (!templateRaw) {
+					return { fields: [] };
+				}
+
+				let template: any;
+				try {
+					template = JSON.parse(templateRaw);
+				} catch {
+					return { fields: [] };
+				}
+
+				const body = template.components?.find((c: any) => c.type === 'BODY');
+				if (!body || !body.example) {
+					return { fields: [] };
+				}
+
+				const fields: ResourceMapperFields['fields'] = [];
+
+				// NAMED parameters
+				if (template.parameter_format === 'NAMED') {
+					const named = body.example.body_text_named_params || [];
+
+					for (const p of named) {
+						if (!p?.param_name) continue;
+						fields.push({
+							id: String(p.param_name),
+							displayName: String(p.param_name),
+							defaultMatch: false,
+							canBeUsedToMatch: false,
+							required: true,
+							display: true,
+							type: 'string',
+						});
+					}
+				} else {
+					// POSITIONAL parameters
+					const examples: string[] = body.example.body_text?.[0] || [];
+
+					examples.forEach((val: string, index: number) => {
+						fields.push({
+							id: `param_${index}`,
+							displayName: `Parameter ${index + 1}`,
+							defaultMatch: false,
+							canBeUsedToMatch: false,
+							required: true,
+							display: true,
+							type: 'string',
+							defaultValue: val,
+						});
+					});
+				}
+
+				return { fields };
 			},
 		},
 	};
@@ -38,87 +96,64 @@ export class KippsAiWhatsappAgent implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Kipps.AI WhatsApp',
 		name: 'kippsAiWhatsapp',
-		icon: { light: 'file:./whatsapp-light.svg', dark: 'file:./whatsapp-dark.svg' },
 		group: ['transform'],
 		version: 1,
-		description: 'Send WhatsApp template message using Kipps.AI',
+		description: 'Send WhatsApp template message using Kipps.AI with dynamic parameter fields',
 		defaults: {
 			name: 'Kipps.AI WhatsApp',
 		},
-
 		inputs: ['main'],
 		outputs: ['main'],
 
-		credentials: [
-			{
-				name: 'kippsAiApi',
-				required: true,
-			},
-		],
+		credentials: [{ name: 'kippsAiApi', required: true }],
 
 		properties: [
+
 			{
 				displayName: 'To',
 				name: 'to',
 				type: 'string',
-				default: '',
-				placeholder: '91XXXXXXXXXX',
 				required: true,
-				description: 'Recipient phone number in format 91XXXXXXXXXX (country code 91 + number, digits only)',
+				default: '',
 			},
+
 			{
 				displayName: 'Template',
 				name: 'templateName',
 				type: 'options',
-				default: '',
 				required: true,
 				typeOptions: {
 					loadOptionsMethod: 'getTemplates',
 				},
-				description: 'Select a WhatsApp template (auto-fetched)',
+				default: '',
 			},
-			{
-				displayName: 'Template Components (JSON)',
-				name: 'template_components',
-				type: 'json',
-				// Auto-derive components from selected template (stored as JSON string in Template field)
-				default: '={{ (JSON.parse($parameter["templateName"] || "{}").components) || [] }}',
-				required: true,
-				description:
-					'Template components for the selected template. Auto-filled from the template; you can view or tweak if needed.',
-				typeOptions: {
-					alwaysOpenEditWindow: true,
+
+		{
+			displayName: 'Parameters',
+			name: 'mappedParameters',
+			type: 'resourceMapper',
+			noDataExpression: true,
+			default: {
+				mappingMode: 'defineBelow',
+				value: {},
+			},
+			required: true,
+			description: 'Enter parameter values for the selected template. Fields are dynamically generated based on the template.',
+			typeOptions: {
+				resourceMapper: {
+					mode: 'map',
+					resourceMapperMethod: 'getTemplateFields',
 				},
 			},
-			{
-				displayName: 'Parameters Example (JSON)',
-				name: 'parameters_example',
-				type: 'json',
-				// Auto-derive example parameters from selected template's BODY example (body_text or body_text_named_params)
-				default:
-					'={{ (() => { try { const raw = $parameter["templateName"]; if (!raw) return []; const t = JSON.parse(raw); const comps = t.components || []; const body = comps.find(c => c.type === "BODY") || comps[0]; const ex = body?.example; if (!ex) return []; if (ex.body_text) return ex.body_text[0] || []; if (ex.body_text_named_params) return ex.body_text_named_params || []; return []; } catch (e) { return []; } })() }}',
-				required: false,
-				description:
-					'Read-only example of expected parameters for the selected template, taken from example.body_text or example.body_text_named_params.',
-				typeOptions: {
-					alwaysOpenEditWindow: true,
-					readOnly: true,
-				},
-			},
-			{
-				displayName: 'Parameters (JSON)',
-				name: 'parameters',
-				type: 'json',
-				default: '{}',
-				required: true,
-				description: 'Enter template parameters JSON. Example: {"body": []}',
-			},
+		},
+
 			{
 				displayName: 'Agent UUID',
 				name: 'agent_uuid',
 				type: 'string',
 				default: '',
 			},
+
 			{
 				displayName: 'Conversation ID',
 				name: 'conversation_id',
@@ -129,77 +164,85 @@ export class KippsAiWhatsappAgent implements INodeType {
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
+
 		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
 
 		for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
-			const to = this.getNodeParameter('to', itemIndex) as string;
-			const templateNameParam = this.getNodeParameter('templateName', itemIndex) as string;
-			const parametersRaw = this.getNodeParameter('parameters', itemIndex) as unknown;
-			const agent_uuid = this.getNodeParameter('agent_uuid', itemIndex, '') as string;
-			const conversation_id = this.getNodeParameter('conversation_id', itemIndex, '') as string;
-			let template_components = this.getNodeParameter('template_components', itemIndex) as unknown[];
 
-			// Normalise parameters: accept either object or JSON string, always ensure { body: [...] }
-			let parameters: { body: unknown } & Record<string, unknown>;
+			const to = this.getNodeParameter('to', itemIndex) as string;
+			const templateRaw = this.getNodeParameter('templateName', itemIndex) as string;
+
+			let template: any;
 			try {
-				if (typeof parametersRaw === 'string') {
-					parameters = (JSON.parse(parametersRaw || '{}') ?? {}) as typeof parameters;
-				} else if (typeof parametersRaw === 'object' && parametersRaw !== null) {
-					parameters = parametersRaw as typeof parameters;
-				} else {
-					parameters = {} as typeof parameters;
-				}
+				template = JSON.parse(templateRaw);
 			} catch (error) {
 				throw new NodeOperationError(
 					this.getNode(),
-					`Parameters (JSON) must be valid JSON. Received: ${String(parametersRaw)}`,
+					`Invalid template data. Please select a template from the dropdown.`,
 				);
 			}
 
-			if (parameters.body === undefined) {
-				// Default to empty body array if user didn't provide one
-				parameters.body = [];
-			}
+			const mapped = this.getNodeParameter('mappedParameters', itemIndex) as {
+				value: Record<string, any>;
+			};
 
-			// Extract template data from dropdown value (stored as JSON string)
-			let templateName: string;
-			try {
-				const templateData = JSON.parse(templateNameParam);
-				templateName = templateData.name;
-				// Auto-fill components if not already set or empty
-				if (!template_components || !Array.isArray(template_components) || template_components.length === 0) {
-					template_components = templateData.components || [];
-				}
-			} catch {
-				// Fallback: if value is just a string (old format), use it as template name
-				templateName = templateNameParam;
-			}
+			const values = mapped?.value || {};
 
-			// Validate components
-			if (!template_components || !Array.isArray(template_components) || template_components.length === 0) {
+			/* VALIDATION */
+			const empty = Object.entries(values)
+				.filter(([_, v]) => !v || v === '')
+				.map(([k]) => k);
+
+			if (empty.length) {
 				throw new NodeOperationError(
 					this.getNode(),
-					`Template components are required for template "${templateName}". Please select a template from the dropdown.`,
+					`Required parameter fields are empty: ${empty.join(', ')}`,
 				);
 			}
 
-			const endpoint = 'https://backend.kipps.ai/integrations/whatsapp-agent/send-template/';
-			const method: IHttpRequestMethods = 'POST';
+			let parameters: any;
+
+			if (template.parameter_format === 'NAMED') {
+				// Convert to { body: [{ name, value }, ...] } format
+				const body = template.components?.find((c: any) => c.type === 'BODY');
+				const namedParams = body?.example?.body_text_named_params || [];
+
+				parameters = {
+					body: namedParams.map((p: any) => ({
+						name: p.param_name,
+						value: values[p.param_name] || '',
+					})),
+				};
+			} else {
+				// POSITIONAL: Convert to { body: ["val1", "val2", ...] } format
+				parameters = {
+					body: Object.keys(values)
+						.sort((a, b) => {
+							const aNum = Number(a.split('_')[1]);
+							const bNum = Number(b.split('_')[1]);
+							return aNum - bNum;
+						})
+						.map((k) => values[k]),
+				};
+			}
 
 			const body: {
 				to: string;
 				template_name: string;
-				parameters: object;
-				template_components: unknown[];
+				template_components: any[];
+				parameters: any;
 				agent_uuid?: string;
 				conversation_id?: string;
 			} = {
 				to,
-				template_name: templateName,
+				template_name: template.name,
+				template_components: template.components || [],
 				parameters,
-				template_components,
 			};
+
+			const agent_uuid = this.getNodeParameter('agent_uuid', itemIndex, '') as string;
+			const conversation_id = this.getNodeParameter('conversation_id', itemIndex, '') as string;
 
 			if (agent_uuid) {
 				body.agent_uuid = agent_uuid;
@@ -210,15 +253,15 @@ export class KippsAiWhatsappAgent implements INodeType {
 
 			try {
 				this.logger.debug('===== Kipps WhatsApp REQUEST =====');
-				this.logger.debug(`Endpoint: ${endpoint}`);
+				this.logger.debug(`Endpoint: https://backend.kipps.ai/integrations/whatsapp-agent/send-template/`);
 				this.logger.debug(`Body: ${JSON.stringify(body)}`);
 
 				const response = await this.helpers.httpRequestWithAuthentication.call(
 					this,
 					'kippsAiApi',
 					{
-						method,
-						url: endpoint,
+						method: 'POST' as IHttpRequestMethods,
+						url: 'https://backend.kipps.ai/integrations/whatsapp-agent/send-template/',
 						body,
 						headers: { 'Content-Type': 'application/json' },
 					},
@@ -247,7 +290,7 @@ export class KippsAiWhatsappAgent implements INodeType {
 
 				throw new NodeOperationError(
 					this.getNode(),
-					JSON.stringify(err?.response?.data || err.message),
+					err?.response?.data ? JSON.stringify(err.response.data) : err?.message || 'Unknown error',
 				);
 			}
 		}
