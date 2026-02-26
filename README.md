@@ -42,7 +42,7 @@ You need two things from your Kipps.AI dashboard:
 
 ### Step 2: Get Available Templates and Components
 
-Before sending messages, you need to know which templates are available and get their components. You can:
+Templates are auto-fetched by the node using your saved credentials. You can still view them via API or dashboard if you want, but you **don’t need to copy components manually**.
 
 1. **Use the Kipps.AI API** to fetch templates:
    ```
@@ -55,9 +55,8 @@ Before sending messages, you need to know which templates are available and get 
 2. **Or check your Kipps.AI dashboard** for approved templates
 
 Each template has:
-- **name**: The template name you'll use (e.g., `real_estate_webinar`)
-- **parameter_format**: Either `NAMED` or `POSITIONAL`
-- **components**: **⚠️ IMPORTANT - Copy this array!** This is required for sending messages
+- **name**: the template name
+- **components**: used automatically by the node when you select a template
 
 **Example template response:**
 ```json
@@ -73,7 +72,7 @@ Each template has:
 }
 ```
 
-**⚠️ You MUST copy the `components` array** - this is what you'll paste into the "Template Components" field in n8n!
+The node now **auto-fetches templates** and **auto-fills template components** after you select a template in the dropdown.
 
 ### Step 3: Create Credentials in n8n
 
@@ -93,21 +92,17 @@ Each template has:
    - Format: E.164 format (e.g., `918520811855` or `+919876543210`)
    - Required: ✅ Yes
 
-2. **Template Name**
-   - Enter the exact template name from your templates list
-   - Example: `real_estate_webinar`
+2. **Template**
+   - Select from dropdown (auto-fetched)
    - Required: ✅ Yes
 
 3. **Parameters (JSON)**
    - Format depends on your template type (see below)
    - Required: ✅ Yes
 
-4. **Template Components (JSON)**
-   - **⚠️ REQUIRED**: Template components array from the template
-   - Get this from the template details when fetching templates list
-   - Format: `[{"type": "BODY", "text": "Your message text"}, ...]`
-   - Required: ✅ Yes
-   - **Important**: Without this, the API will send an empty message!
+4. **Template Components**
+   - Auto-filled from the selected template
+   - You don’t need to paste anything
 
 #### Optional Fields:
 
@@ -204,9 +199,9 @@ Or simply:
 
 **Node Configuration:**
 - **To**: `918520811855`
-- **Template Name**: `real_estate_webinar`
+- **Template**: select `real_estate_webinar` in dropdown
 - **Parameters**: `{"body": []}`
-- **Template Components**: 
+- **Template Components**: auto-filled
   ```json
   [
     {
@@ -220,7 +215,7 @@ Or simply:
 
 **Result:** Sends the template message without any dynamic parameters.
 
-**⚠️ Note:** The Template Components field is REQUIRED - copy it from the template's `components` array!
+**Note:** Template Components is auto-filled after you select a template.
 
 ---
 
@@ -251,7 +246,7 @@ Or simply:
 
 **Node Configuration:**
 - **To**: `918520811855`
-- **Template Name**: `aha_smart_homes`
+- **Template**: select `aha_smart_homes` in dropdown
 - **Parameters**: 
   ```json
   {
@@ -260,7 +255,7 @@ Or simply:
     ]
   }
   ```
-- **Template Components**: 
+- **Template Components**: auto-filled
   ```json
   [
     {
@@ -320,14 +315,14 @@ Or simply:
 
 **Node Configuration:**
 - **To**: `918520811855`
-- **Template Name**: `aha_homes_consultation`
+- **Template**: select `aha_homes_consultation` in dropdown
 - **Parameters**: 
   ```json
   {
     "body": ["Arav", "5 PM", "30-oct-2025"]
   }
   ```
-- **Template Components**: 
+- **Template Components**: auto-filled
   ```json
   [
     {
@@ -368,7 +363,7 @@ If you have data from a previous node (e.g., from a database or API):
 
 **Kipps.AI WhatsApp Node Configuration:**
 - **To**: `{{ $json.phoneNumber }}` (from previous node)
-- **Template Name**: `webinar_invitation`
+- **Template**: select `webinar_invitation` in dropdown
 - **Parameters**: 
   ```json
   {
@@ -398,7 +393,7 @@ This uses dynamic data from the previous node in your workflow.
      - `"NAMED"` → Use `{"body": [{"name": "...", "value": "..."}]}`
      - `"POSITIONAL"` → Use `{"body": ["value1", "value2"]}`
      - `"NA"` or missing → Use `{"body": []}`
-   - **`components`**: ⚠️ **COPY THIS ENTIRE ARRAY!** Paste into "Template Components" field
+   - **`components`**: used by the node automatically (no copy/paste needed)
 
 4. **Check `components` array for examples:**
    - Look for `example.body_text_named_params` (for NAMED)
@@ -472,10 +467,8 @@ This uses dynamic data from the previous node in your workflow.
 
 ### Empty message received
 
-- ✅ **Check Template Components field** - it's REQUIRED!
-- ✅ Make sure you copied the entire `components` array from the template
-- ✅ Verify the JSON is valid
-- ✅ Ensure `template_components` is not empty array `[]` - it must contain the actual components
+- ✅ Make sure you selected the correct template in the dropdown
+- ✅ Make sure your credentials are correct
 
 ---
 
@@ -551,7 +544,7 @@ For issues or questions:
 - [ ] Configure node with:
   - [ ] Template name
   - [ ] Parameters (JSON)
-  - [ ] **Template Components (JSON) - REQUIRED!** ⚠️
+  - [ ] Template Components auto-filled
 - [ ] Test workflow execution
 - [ ] Verify WhatsApp message is sent (not empty)
 

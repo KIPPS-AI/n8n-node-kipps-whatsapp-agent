@@ -4,10 +4,36 @@ import type {
 	INodeType,
 	INodeTypeDescription,
 	IHttpRequestMethods,
+	ILoadOptionsFunctions,
+	INodePropertyOptions,
 } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
 
 export class KippsAiWhatsapp implements INodeType {
+	methods = {
+		loadOptions: {
+			async getTemplates(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const endpoint = 'https://backend.kipps.ai/integrations/get-whatsapp-templates/';
+				const method: IHttpRequestMethods = 'GET';
+
+				const response = await this.helpers.httpRequestWithAuthentication.call(this, 'kippsAiApi', {
+					method,
+					url: endpoint,
+					headers: { 'Content-Type': 'application/json' },
+				});
+
+				const templates = Array.isArray(response) ? response : [];
+
+				return templates
+					.filter((t: any) => t?.name)
+					.map((t: any) => ({
+						name: String(t.name),
+						value: String(t.name),
+					}));
+			},
+		},
+	};
+
 	description: INodeTypeDescription = {
 		displayName: 'Kipps.AI WhatsApp',
 		name: 'kippsAiWhatsapp',
@@ -40,12 +66,15 @@ export class KippsAiWhatsapp implements INodeType {
 				description: 'Recipient phone number in E.164 format',
 			},
 			{
-				displayName: 'Template Name',
+				displayName: 'Template',
 				name: 'templateName',
-				type: 'string',
+				type: 'options',
 				default: '',
 				required: true,
-				description: 'WhatsApp template name created in Kipps portal',
+				typeOptions: {
+					loadOptionsMethod: 'getTemplates',
+				},
+				description: 'Select a WhatsApp template (auto-fetched)',
 			},
 			{
 				displayName: 'Parameters (JSON)',
@@ -53,17 +82,7 @@ export class KippsAiWhatsapp implements INodeType {
 				type: 'json',
 				default: '{}',
 				required: true,
-				description:
-					'For NAMED template ({{name}}): {"body": [{"name": "industry", "value": "IT"}]} \nFor POSITIONAL template ({{1}}): {"body": ["John", "Order123"]}',
-			},
-			{
-				displayName: 'Template Components (JSON)',
-				name: 'template_components',
-				type: 'json',
-				default: '[]',
-				required: true,
-				description:
-					'Required: Template components array from the template. Get this from the template details when fetching templates list. Example: [{"type": "BODY", "text": "Your message text"}]',
+				description: 'Enter template parameters JSON. Example: {"body": []}',
 			},
 			{
 				displayName: 'Agent UUID',
@@ -90,7 +109,26 @@ export class KippsAiWhatsapp implements INodeType {
 			const parameters = this.getNodeParameter('parameters', itemIndex) as object;
 			const agent_uuid = this.getNodeParameter('agent_uuid', itemIndex, '') as string;
 			const conversation_id = this.getNodeParameter('conversation_id', itemIndex, '') as string;
-			const template_components = this.getNodeParameter('template_components', itemIndex) as unknown[];
+
+			// Fetch templates and auto-attach components for selected template
+			const templatesEndpoint = 'https://backend.kipps.ai/integrations/get-whatsapp-templates/';
+			const templates = await this.helpers.httpRequestWithAuthentication.call(this, 'kippsAiApi', {
+				method: 'GET',
+				url: templatesEndpoint,
+				headers: { 'Content-Type': 'application/json' },
+			});
+
+			const selected = Array.isArray(templates)
+				? (templates as any[]).find((t) => t?.name === templateName)
+				: undefined;
+
+			const template_components = selected?.components as unknown[] | undefined;
+			if (!template_components || !Array.isArray(template_components) || template_components.length === 0) {
+				throw new NodeOperationError(
+					this.getNode(),
+					`Could not load template components for template "${templateName}". Please check credentials and template name.`,
+				);
+			}
 
 			const endpoint = 'https://backend.kipps.ai/integrations/whatsapp-agent/send-template/';
 			const method: IHttpRequestMethods = 'POST';
