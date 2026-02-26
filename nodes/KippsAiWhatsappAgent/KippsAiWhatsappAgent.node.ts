@@ -39,7 +39,7 @@ export class KippsAiWhatsappAgent implements INodeType {
 				if (!templateRaw) {
 					return { 
 						fields: [],
-						emptyFieldsNotice: '👆 Select a template above to see parameter fields here.and wait for some seconds',
+						emptyFieldsNotice: '👆 Select a template above and wait for some time to see parameter fields here.',
 					};
 				}
 
