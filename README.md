@@ -2,6 +2,13 @@
 
 n8n community node for sending WhatsApp template messages via Kipps.AI API.
 
+## ✨ Features
+
+- **Auto-fetches templates** - No need to manually get template list
+- **Template dropdown** - Select template from auto-populated list
+- **Auto-fills components** - Template components automatically filled when you select a template
+- **Simple workflow** - Just select template, enter phone + parameters, and send!
+
 ## 📦 Installation
 
 ### For Self-Hosted n8n
@@ -40,39 +47,17 @@ You need two things from your Kipps.AI dashboard:
 1. **Bearer Token**: Your API authentication token
 2. **Organization ID**: Your organization UUID (e.g., `bb51f8ad-4ee8-40cf-98aa-64b9c4b3eae9`)
 
-### Step 2: Get Available Templates and Components
+### Step 2: Understanding Templates
 
-Templates are auto-fetched by the node using your saved credentials. You can still view them via API or dashboard if you want, but you **don’t need to copy components manually**.
+The node **automatically fetches all available templates** when you open it. You don't need to manually get templates or copy components - everything is handled automatically!
 
-1. **Use the Kipps.AI API** to fetch templates:
-   ```
-   GET https://backend.kipps.ai/integrations/get-whatsapp-templates/
-   Headers:
-     Authorization: Bearer YOUR_TOKEN
-     X-Organization-ID: YOUR_ORG_ID
-   ```
+**What happens:**
+1. When you open the node, it fetches all templates using your credentials
+2. Templates appear in a dropdown for easy selection
+3. When you select a template, components are auto-filled
+4. You only need to enter: phone number and parameters
 
-2. **Or check your Kipps.AI dashboard** for approved templates
-
-Each template has:
-- **name**: the template name
-- **components**: used automatically by the node when you select a template
-
-**Example template response:**
-```json
-{
-  "name": "real_estate_webinar",
-  "parameter_format": "POSITIONAL",
-  "components": [
-    {
-      "type": "BODY",
-      "text": "Hi, \n\nQuick question, are you fully utilising your cold lead database?..."
-    }
-  ]
-}
-```
-
-The node now **auto-fetches templates** and **auto-fills template components** after you select a template in the dropdown.
+**Note:** You can still view templates via API or dashboard if needed, but it's not required for using the node.
 
 ### Step 3: Create Credentials in n8n
 
@@ -86,23 +71,31 @@ The node now **auto-fetches templates** and **auto-fills template components** a
 
 ### Step 4: Configure the Node
 
+The node is **super simple** - just 3 steps:
+
 #### Required Fields:
 
 1. **To** (Phone Number)
+   - Enter recipient phone number
    - Format: E.164 format (e.g., `918520811855` or `+919876543210`)
    - Required: ✅ Yes
 
-2. **Template**
-   - Select from dropdown (auto-fetched)
+2. **Template** (Dropdown)
+   - Click dropdown → See all available templates
+   - Select the template you want to send
+   - **Templates are auto-fetched** using your credentials
    - Required: ✅ Yes
 
-3. **Parameters (JSON)**
-   - Format depends on your template type (see below)
-   - Required: ✅ Yes
+3. **Template Components (JSON)**
+   - **Auto-filled automatically** when you select a template
+   - Visible for verification - you can view/edit if needed
+   - Usually you don't need to change this
+   - Required: ✅ Yes (but auto-filled)
 
-4. **Template Components**
-   - Auto-filled from the selected template
-   - You don’t need to paste anything
+4. **Parameters (JSON)**
+   - Enter template parameters based on template type
+   - Format depends on your template (see examples below)
+   - Required: ✅ Yes
 
 #### Optional Fields:
 
@@ -113,6 +106,8 @@ The node now **auto-fetches templates** and **auto-fills template components** a
 6. **Conversation ID**
    - Existing conversation ID to continue a thread
    - Leave empty to create new conversation
+
+**That's it!** Select template → Enter phone + parameters → Execute!
 
 ---
 
@@ -183,70 +178,29 @@ Or simply:
 
 ### Example 1: Send Simple Template (No Parameters)
 
-**Template Details from API:**
-```json
-{
-  "name": "real_estate_webinar",
-  "parameter_format": "POSITIONAL",
-  "components": [
-    {
-      "type": "BODY",
-      "text": "Hi, \n\nQuick question, are you fully utilising your cold lead database?\nMost real estate teams miss out on conversions because follow-ups are delayed or inconsistent.\n\nWe here at Kipps.AI are hosting a webinar on 15 Dec at 11 AM showing how AI automates follow-ups, responds in seconds, and helps revive cold leads.\n\nRegister here: https://www.kipps.ai/webinar/10x-your-client-reach-with-ai-voice-agents-1\n\nPS: Attendees will get a pilot solution"
-    }
-  ]
-}
-```
-
 **Node Configuration:**
 - **To**: `918520811855`
-- **Template**: select `real_estate_webinar` in dropdown
+- **Template**: Select `real_estate_webinar` from dropdown
+- **Template Components**: ✅ Auto-filled (visible for verification)
 - **Parameters**: `{"body": []}`
-- **Template Components**: auto-filled
-  ```json
-  [
-    {
-      "type": "BODY",
-      "text": "Hi, \n\nQuick question, are you fully utilising your cold lead database?\nMost real estate teams miss out on conversions because follow-ups are delayed or inconsistent.\n\nWe here at Kipps.AI are hosting a webinar on 15 Dec at 11 AM showing how AI automates follow-ups, responds in seconds, and helps revive cold leads.\n\nRegister here: https://www.kipps.ai/webinar/10x-your-client-reach-with-ai-voice-agents-1\n\nPS: Attendees will get a pilot solution"
-    }
-  ]
-  ```
 - **Agent UUID**: (empty)
 - **Conversation ID**: (empty)
 
 **Result:** Sends the template message without any dynamic parameters.
 
-**Note:** Template Components is auto-filled after you select a template.
+**What happens:**
+1. You select template from dropdown → Components auto-fill
+2. You enter phone number and parameters
+3. Click Execute → Message sent!
 
 ---
 
 ### Example 2: Send NAMED Template
 
-**Template Details from API:**
-```json
-{
-  "name": "aha_smart_homes",
-  "parameter_format": "NAMED",
-  "components": [
-    {
-      "type": "BODY",
-      "text": "Hi {{name}}, Aarav here from AHA Smart Homes 👋\nIf you face any issue or need help adding new devices, just reply here — we'll connect you to a support expert instantly."
-    },
-    {
-      "type": "BUTTONS",
-      "buttons": [
-        {
-          "type": "QUICK_REPLY",
-          "text": "Add New Device"
-        }
-      ]
-    }
-  ]
-}
-```
-
 **Node Configuration:**
 - **To**: `918520811855`
-- **Template**: select `aha_smart_homes` in dropdown
+- **Template**: Select `aha_smart_homes` from dropdown
+- **Template Components**: ✅ Auto-filled (visible for verification)
 - **Parameters**: 
   ```json
   {
@@ -255,24 +209,6 @@ Or simply:
     ]
   }
   ```
-- **Template Components**: auto-filled
-  ```json
-  [
-    {
-      "type": "BODY",
-      "text": "Hi {{name}}, Aarav here from AHA Smart Homes 👋\nIf you face any issue or need help adding new devices, just reply here — we'll connect you to a support expert instantly."
-    },
-    {
-      "type": "BUTTONS",
-      "buttons": [
-        {
-          "type": "QUICK_REPLY",
-          "text": "Add New Device"
-        }
-      ]
-    }
-  ]
-  ```
 
 **Result:** Sends message with "John Doe" replacing `{{name}}` in the template.
 
@@ -280,70 +216,15 @@ Or simply:
 
 ### Example 3: Send POSITIONAL Template
 
-**Template Details from API:**
-```json
-{
-  "name": "aha_homes_consultation",
-  "parameter_format": "POSITIONAL",
-  "components": [
-    {
-      "type": "HEADER",
-      "format": "TEXT",
-      "text": "Consultation Booked"
-    },
-    {
-      "type": "BODY",
-      "text": "Your consultation is booked with {{1}} for {{2}} on {{3}} \nYou can reschedule anytime using the button below. Thank you for choosing AHA Smart Homes!",
-      "example": {
-        "body_text": [
-          ["Arav", "5 PM", "30-oct-2025"]
-        ]
-      }
-    },
-    {
-      "type": "BUTTONS",
-      "buttons": [
-        {
-          "type": "QUICK_REPLY",
-          "text": "Reschedule Consultation"
-        }
-      ]
-    }
-  ]
-}
-```
-
 **Node Configuration:**
 - **To**: `918520811855`
-- **Template**: select `aha_homes_consultation` in dropdown
+- **Template**: Select `aha_homes_consultation` from dropdown
+- **Template Components**: ✅ Auto-filled (visible for verification)
 - **Parameters**: 
   ```json
   {
     "body": ["Arav", "5 PM", "30-oct-2025"]
   }
-  ```
-- **Template Components**: auto-filled
-  ```json
-  [
-    {
-      "type": "HEADER",
-      "format": "TEXT",
-      "text": "Consultation Booked"
-    },
-    {
-      "type": "BODY",
-      "text": "Your consultation is booked with {{1}} for {{2}} on {{3}} \nYou can reschedule anytime using the button below. Thank you for choosing AHA Smart Homes!"
-    },
-    {
-      "type": "BUTTONS",
-      "buttons": [
-        {
-          "type": "QUICK_REPLY",
-          "text": "Reschedule Consultation"
-        }
-      ]
-    }
-  ]
   ```
 
 **Result:** Sends message with:
@@ -363,7 +244,8 @@ If you have data from a previous node (e.g., from a database or API):
 
 **Kipps.AI WhatsApp Node Configuration:**
 - **To**: `{{ $json.phoneNumber }}` (from previous node)
-- **Template**: select `webinar_invitation` in dropdown
+- **Template**: Select `webinar_invitation` from dropdown
+- **Template Components**: ✅ Auto-filled
 - **Parameters**: 
   ```json
   {
@@ -378,28 +260,24 @@ This uses dynamic data from the previous node in your workflow.
 
 ---
 
-## 🔍 How to Find Template Details
+## 🔍 Understanding Template Parameters
 
-1. **Get templates list** from API:
-   ```
-   GET https://backend.kipps.ai/integrations/get-whatsapp-templates/
-   ```
+When you select a template from the dropdown, you need to provide parameters based on the template type:
 
-2. **Find your template** in the response array
+### Template Types:
 
-3. **Copy these fields:**
-   - **`name`**: Use this in "Template Name" field
-   - **`parameter_format`**: Determines parameter format
-     - `"NAMED"` → Use `{"body": [{"name": "...", "value": "..."}]}`
-     - `"POSITIONAL"` → Use `{"body": ["value1", "value2"]}`
-     - `"NA"` or missing → Use `{"body": []}`
-   - **`components`**: used by the node automatically (no copy/paste needed)
+1. **NAMED Templates** (uses `{{name}}`, `{{industry}}`, etc.)
+   - Parameters format: `{"body": [{"name": "param1", "value": "value1"}]}`
+   - Example: `{"body": [{"name": "name", "value": "John"}]}`
 
-4. **Check `components` array for examples:**
-   - Look for `example.body_text_named_params` (for NAMED)
-   - Look for `example.body_text` (for POSITIONAL)
+2. **POSITIONAL Templates** (uses `{{1}}`, `{{2}}`, etc.)
+   - Parameters format: `{"body": ["value1", "value2"]}`
+   - Example: `{"body": ["John", "Order123"]}`
 
-**⚠️ CRITICAL:** The `components` array is REQUIRED - without it, you'll get an empty message!
+3. **No Parameters**
+   - Parameters format: `{"body": []}`
+
+**Note:** The node automatically handles template components - you don't need to worry about that!
 
 ---
 
@@ -467,8 +345,17 @@ This uses dynamic data from the previous node in your workflow.
 
 ### Empty message received
 
-- ✅ Make sure you selected the correct template in the dropdown
-- ✅ Make sure your credentials are correct
+- ✅ Make sure you selected a template from the dropdown (don't type manually)
+- ✅ Verify template components field is auto-filled (should show components JSON)
+- ✅ Check your credentials are correct
+- ✅ Ensure template is APPROVED in Kipps.AI dashboard
+
+### Template dropdown is empty
+
+- ✅ Check your credentials are saved correctly
+- ✅ Verify Bearer Token and Organization ID are valid
+- ✅ Check n8n console for API errors
+- ✅ Ensure you have approved templates in your Kipps.AI account
 
 ---
 
@@ -537,16 +424,15 @@ For issues or questions:
 - [ ] Install package: `npm install n8n-nodes-kipps-whatsapp-agent`
 - [ ] Restart n8n server
 - [ ] Get Bearer Token and Organization ID from Kipps.AI
-- [ ] Get list of available templates
-- [ ] **Copy the `components` array from your template** ⚠️
 - [ ] Create credentials in n8n
 - [ ] Add "Kipps.AI WhatsApp" node to workflow
-- [ ] Configure node with:
-  - [ ] Template name
-  - [ ] Parameters (JSON)
-  - [ ] Template Components auto-filled
+- [ ] Configure node:
+  - [ ] **To**: Enter phone number
+  - [ ] **Template**: Select from dropdown (auto-fetched)
+  - [ ] **Template Components**: ✅ Auto-filled (visible for verification)
+  - [ ] **Parameters**: Enter JSON based on template type
 - [ ] Test workflow execution
-- [ ] Verify WhatsApp message is sent (not empty)
+- [ ] Verify WhatsApp message is sent successfully
 
 ---
 
