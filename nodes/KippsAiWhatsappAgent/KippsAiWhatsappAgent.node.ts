@@ -24,11 +24,12 @@ export class KippsAiWhatsapp implements INodeType {
 
 				const templates = Array.isArray(response) ? response : [];
 
+				// Store full template data in value (as JSON string) to avoid fetching again
 				return templates
 					.filter((t: any) => t?.name)
 					.map((t: any) => ({
 						name: String(t.name),
-						value: String(t.name),
+						value: JSON.stringify(t), // Store full template object
 					}));
 			},
 		},
@@ -77,6 +78,18 @@ export class KippsAiWhatsapp implements INodeType {
 				description: 'Select a WhatsApp template (auto-fetched)',
 			},
 			{
+				displayName: 'Template Components (JSON)',
+				name: 'template_components',
+				type: 'json',
+				default: '[]',
+				required: true,
+				description:
+					'Template components will be auto-filled from selected template on execution. You can view/edit here if needed. Leave empty to auto-fill.',
+				typeOptions: {
+					alwaysOpenEditWindow: true,
+				},
+			},
+			{
 				displayName: 'Parameters (JSON)',
 				name: 'parameters',
 				type: 'json',
@@ -105,28 +118,31 @@ export class KippsAiWhatsapp implements INodeType {
 
 		for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
 			const to = this.getNodeParameter('to', itemIndex) as string;
-			const templateName = this.getNodeParameter('templateName', itemIndex) as string;
+			const templateNameParam = this.getNodeParameter('templateName', itemIndex) as string;
 			const parameters = this.getNodeParameter('parameters', itemIndex) as object;
 			const agent_uuid = this.getNodeParameter('agent_uuid', itemIndex, '') as string;
 			const conversation_id = this.getNodeParameter('conversation_id', itemIndex, '') as string;
+			let template_components = this.getNodeParameter('template_components', itemIndex) as unknown[];
 
-			// Fetch templates and auto-attach components for selected template
-			const templatesEndpoint = 'https://backend.kipps.ai/integrations/get-whatsapp-templates/';
-			const templates = await this.helpers.httpRequestWithAuthentication.call(this, 'kippsAiApi', {
-				method: 'GET',
-				url: templatesEndpoint,
-				headers: { 'Content-Type': 'application/json' },
-			});
+			// Extract template data from dropdown value (stored as JSON string)
+			let templateName: string;
+			try {
+				const templateData = JSON.parse(templateNameParam);
+				templateName = templateData.name;
+				// Auto-fill components if not already set or empty
+				if (!template_components || !Array.isArray(template_components) || template_components.length === 0) {
+					template_components = templateData.components || [];
+				}
+			} catch {
+				// Fallback: if value is just a string (old format), use it as template name
+				templateName = templateNameParam;
+			}
 
-			const selected = Array.isArray(templates)
-				? (templates as any[]).find((t) => t?.name === templateName)
-				: undefined;
-
-			const template_components = selected?.components as unknown[] | undefined;
+			// Validate components
 			if (!template_components || !Array.isArray(template_components) || template_components.length === 0) {
 				throw new NodeOperationError(
 					this.getNode(),
-					`Could not load template components for template "${templateName}". Please check credentials and template name.`,
+					`Template components are required for template "${templateName}". Please select a template from the dropdown.`,
 				);
 			}
 
