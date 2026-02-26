@@ -81,10 +81,11 @@ export class KippsAiWhatsappAgent implements INodeType {
 				displayName: 'Template Components (JSON)',
 				name: 'template_components',
 				type: 'json',
-				default: '[]',
+				// Auto-derive components from selected template (stored as JSON string in Template field)
+				default: '={{ (JSON.parse($parameter["templateName"] || "{}").components) || [] }}',
 				required: true,
 				description:
-					'Template components will be auto-filled from selected template on execution. You can view/edit here if needed. Leave empty to auto-fill.',
+					'Template components for the selected template. Auto-filled from the template; you can view or tweak if needed.',
 				typeOptions: {
 					alwaysOpenEditWindow: true,
 				},
@@ -119,10 +120,32 @@ export class KippsAiWhatsappAgent implements INodeType {
 		for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
 			const to = this.getNodeParameter('to', itemIndex) as string;
 			const templateNameParam = this.getNodeParameter('templateName', itemIndex) as string;
-			const parameters = this.getNodeParameter('parameters', itemIndex) as object;
+			const parametersRaw = this.getNodeParameter('parameters', itemIndex) as unknown;
 			const agent_uuid = this.getNodeParameter('agent_uuid', itemIndex, '') as string;
 			const conversation_id = this.getNodeParameter('conversation_id', itemIndex, '') as string;
 			let template_components = this.getNodeParameter('template_components', itemIndex) as unknown[];
+
+			// Normalise parameters: accept either object or JSON string, always ensure { body: [...] }
+			let parameters: { body: unknown } & Record<string, unknown>;
+			try {
+				if (typeof parametersRaw === 'string') {
+					parameters = (JSON.parse(parametersRaw || '{}') ?? {}) as typeof parameters;
+				} else if (typeof parametersRaw === 'object' && parametersRaw !== null) {
+					parameters = parametersRaw as typeof parameters;
+				} else {
+					parameters = {} as typeof parameters;
+				}
+			} catch (error) {
+				throw new NodeOperationError(
+					this.getNode(),
+					`Parameters (JSON) must be valid JSON. Received: ${String(parametersRaw)}`,
+				);
+			}
+
+			if (parameters.body === undefined) {
+				// Default to empty body array if user didn't provide one
+				parameters.body = [];
+			}
 
 			// Extract template data from dropdown value (stored as JSON string)
 			let templateName: string;
@@ -133,9 +156,18 @@ export class KippsAiWhatsappAgent implements INodeType {
 				if (!template_components || !Array.isArray(template_components) || template_components.length === 0) {
 					template_components = templateData.components || [];
 				}
+
+				this.logger.debug(
+					`Kipps WhatsApp: Selected template "${templateName}" with components count: ${
+						Array.isArray(template_components) ? template_components.length : 0
+					}`,
+				);
 			} catch {
 				// Fallback: if value is just a string (old format), use it as template name
 				templateName = templateNameParam;
+				this.logger.debug(
+					`Kipps WhatsApp: Using template name as plain string "${templateName}" (no template metadata available).`,
+				);
 			}
 
 			// Validate components
@@ -171,6 +203,11 @@ export class KippsAiWhatsappAgent implements INodeType {
 			}
 
 			try {
+				this.logger.debug(
+					`Kipps WhatsApp: Final request payload → to="${body.to}", template="${body.template_name}", components=${
+						Array.isArray(body.template_components) ? body.template_components.length : 0
+					}, hasParams=${Object.keys(body.parameters || {}).length > 0}`,
+				);
 				this.logger.debug('===== Kipps WhatsApp REQUEST =====');
 				this.logger.debug(`Endpoint: ${endpoint}`);
 				this.logger.debug(`Body: ${JSON.stringify(body)}`);
