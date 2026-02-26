@@ -91,6 +91,21 @@ export class KippsAiWhatsappAgent implements INodeType {
 				},
 			},
 			{
+				displayName: 'Parameters Example (JSON)',
+				name: 'parameters_example',
+				type: 'json',
+				// Auto-derive example parameters from selected template's BODY example (body_text or body_text_named_params)
+				default:
+					'={{ (() => { try { const raw = $parameter["templateName"]; if (!raw) return []; const t = JSON.parse(raw); const comps = t.components || []; const body = comps.find(c => c.type === "BODY") || comps[0]; const ex = body?.example; if (!ex) return []; if (ex.body_text) return ex.body_text[0] || []; if (ex.body_text_named_params) return ex.body_text_named_params || []; return []; } catch (e) { return []; } })() }}',
+				required: false,
+				description:
+					'Read-only example of expected parameters for the selected template, taken from example.body_text or example.body_text_named_params.',
+				typeOptions: {
+					alwaysOpenEditWindow: true,
+					readOnly: true,
+				},
+			},
+			{
 				displayName: 'Parameters (JSON)',
 				name: 'parameters',
 				type: 'json',
