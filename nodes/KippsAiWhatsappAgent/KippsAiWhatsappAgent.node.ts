@@ -37,55 +37,96 @@ export class KippsAiWhatsappAgent implements INodeType {
 			async getTemplateFields(this: ILoadOptionsFunctions): Promise<ResourceMapperFields> {
 				const templateRaw = this.getCurrentNodeParameter('templateName') as string;
 				if (!templateRaw) {
-					return { fields: [] };
+					return { 
+						fields: [],
+						emptyFieldsNotice: '👆 Select a template above to see parameter fields here.and wait for some seconds',
+					};
 				}
 
 				let template: any;
 				try {
 					template = JSON.parse(templateRaw);
-				} catch {
+				} catch (error) {
 					return { fields: [] };
 				}
 
 				const body = template.components?.find((c: any) => c.type === 'BODY');
-				if (!body || !body.example) {
-					return { fields: [] };
+				if (!body) {
+					return { 
+						fields: [],
+						emptyFieldsNotice: 'This template has no message body with parameters.',
+					};
 				}
 
 				const fields: ResourceMapperFields['fields'] = [];
 
 				// NAMED parameters
 				if (template.parameter_format === 'NAMED') {
-					const named = body.example.body_text_named_params || [];
+					const named = body.example?.body_text_named_params || [];
 
 					for (const p of named) {
 						if (!p?.param_name) continue;
+						const exampleHint = p.example ? ` (e.g., "${p.example}")` : '';
 						fields.push({
 							id: String(p.param_name),
-							displayName: String(p.param_name),
+							displayName: `${p.param_name}${exampleHint}`,
 							defaultMatch: false,
 							canBeUsedToMatch: false,
 							required: true,
 							display: true,
 							type: 'string',
+							defaultValue: p.example || '',
 						});
 					}
 				} else {
 					// POSITIONAL parameters
-					const examples: string[] = body.example.body_text?.[0] || [];
+					// Try to get count from example first
+					let paramCount = 0;
+					const examples: string[] = body.example?.body_text?.[0] || [];
+					
+					if (examples.length > 0) {
+						// Use example count
+						paramCount = examples.length;
+					} else {
+						// Fallback: Count placeholders in BODY text ({{1}}, {{2}}, etc.)
+						const bodyText = body.text || '';
+						const placeholderMatches = bodyText.match(/\{\{(\d+)\}\}/g) || [];
+						
+						if (placeholderMatches.length > 0) {
+							const numbers = placeholderMatches.map((m: string) => {
+								const match = m.match(/\d+/);
+								return match ? parseInt(match[0]) : 0;
+							});
+							paramCount = Math.max(...numbers);
+						} else {
+							paramCount = 0;
+						}
+					}
 
-					examples.forEach((val: string, index: number) => {
+					// Generate fields based on count
+					for (let index = 0; index < paramCount; index++) {
+						const exampleVal = examples[index] || '';
+						const displayName = exampleVal 
+							? `Parameter ${index + 1} (e.g., "${exampleVal}")`
+							: `Parameter ${index + 1}`;
 						fields.push({
 							id: `param_${index}`,
-							displayName: `Parameter ${index + 1}`,
+							displayName,
 							defaultMatch: false,
 							canBeUsedToMatch: false,
 							required: true,
 							display: true,
 							type: 'string',
-							defaultValue: val,
+							defaultValue: exampleVal,
 						});
-					});
+					}
+				}
+
+				if (fields.length === 0) {
+					return {
+						fields: [],
+						emptyFieldsNotice: '✅ This template has no parameters to fill. The message will be sent as-is.',
+					};
 				}
 
 				return { fields };
@@ -138,11 +179,13 @@ export class KippsAiWhatsappAgent implements INodeType {
 				value: {},
 			},
 			required: true,
-			description: 'Enter parameter values for the selected template. Fields are dynamically generated based on the template.',
+			description: 'Enter values for template parameters. Fields appear automatically after selecting a template above.',
 			typeOptions: {
 				resourceMapper: {
 					mode: 'map',
 					resourceMapperMethod: 'getTemplateFields',
+					supportAutoMap: false,
+					hideNoDataError: true,
 				},
 			},
 		},
@@ -252,10 +295,6 @@ export class KippsAiWhatsappAgent implements INodeType {
 			}
 
 			try {
-				this.logger.debug('===== Kipps WhatsApp REQUEST =====');
-				this.logger.debug(`Endpoint: https://backend.kipps.ai/integrations/whatsapp-agent/send-template/`);
-				this.logger.debug(`Body: ${JSON.stringify(body)}`);
-
 				const response = await this.helpers.httpRequestWithAuthentication.call(
 					this,
 					'kippsAiApi',
@@ -267,9 +306,6 @@ export class KippsAiWhatsappAgent implements INodeType {
 					},
 				);
 
-				this.logger.debug('===== Kipps WhatsApp RESPONSE =====');
-				this.logger.debug(JSON.stringify(response));
-
 				returnData.push({
 					json: response,
 					pairedItem: itemIndex,
@@ -279,14 +315,6 @@ export class KippsAiWhatsappAgent implements INodeType {
 					message?: string;
 					response?: { data?: unknown };
 				};
-
-				this.logger.error('===== Kipps WhatsApp FAILED =====');
-				this.logger.error(`Body: ${JSON.stringify(body)}`);
-				this.logger.error(`Message: ${err?.message}`);
-
-				if (err?.response?.data) {
-					this.logger.error(`API Response: ${JSON.stringify(err.response.data)}`);
-				}
 
 				throw new NodeOperationError(
 					this.getNode(),
