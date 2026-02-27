@@ -1,42 +1,33 @@
 {
   "name": "n8n-nodes-kipps-whatsapp-agent",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "n8n node for sending WhatsApp template messages via Kipps.AI",
   "license": "MIT",
-
   "main": "dist/index.js",
-
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch"
   },
-
   "repository": {
     "type": "git",
     "url": "git+https://github.com/KIPPS-AI/n8n-node-kipps-whatsapp-agent.git"
   },
-
   "keywords": [
     "n8n-community-node-package",
     "kipps",
     "whatsapp"
   ],
-
   "author": {
-		"name": "kipps.ai",
-		"email": "tech@kipps.ai"
-	},
-
+    "name": "kipps.ai",
+    "email": "tech@kipps.ai"
+  },
   "bugs": {
     "url": "https://github.com/KIPPS-AI/n8n-node-kipps-whatsapp-agent/issues"
   },
-
   "homepage": "https://kipps.ai",
-
   "files": [
     "dist"
   ],
-
   "n8n": {
     "nodes": [
       "dist/nodes/KippsAiWhatsappAgent/KippsAiWhatsappAgent.node.js"
@@ -45,11 +36,9 @@
       "dist/credentials/KippsAiApi.credentials.js"
     ]
   },
-
   "dependencies": {
     "n8n-workflow": "^2.10.1"
   },
-
   "devDependencies": {
     "@types/node": "^25.3.0",
     "typescript": "^5.9.3"
