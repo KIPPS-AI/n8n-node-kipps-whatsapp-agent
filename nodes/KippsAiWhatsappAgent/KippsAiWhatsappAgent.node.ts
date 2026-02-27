@@ -29,16 +29,16 @@ export class KippsAiWhatsappAgent implements INodeType {
 					.filter((t: any) => t?.status === 'APPROVED')
 					.map((t: any) => ({
 						name: String(t.name),
-						value: JSON.stringify(t),
+						value: String(t.name),
 					}));
 			},
 
 			async getTemplateComponentsPreview(
 				this: ILoadOptionsFunctions,
 			): Promise<INodePropertyOptions[]> {
-				const templateRaw = this.getCurrentNodeParameter('templateName') as string;
+				const templateName = this.getCurrentNodeParameter('templateName') as string;
 
-				if (!templateRaw) {
+				if (!templateName) {
 					return [
 						{
 							name: 'Select a template above to see its components.',
@@ -49,12 +49,31 @@ export class KippsAiWhatsappAgent implements INodeType {
 
 				let template: any;
 				try {
-					template = JSON.parse(templateRaw);
+					const res = await this.helpers.httpRequestWithAuthentication.call(
+						this,
+						'kippsAiApi',
+						{
+							method: 'GET',
+							url: 'https://backend.kipps.ai/integrations/get-whatsapp-templates/',
+						},
+					);
+
+					const templates = (res || []).filter((t: any) => t?.status === 'APPROVED');
+					template = templates.find((t: any) => String(t.name) === templateName);
 				} catch {
 					return [
 						{
 							name: 'The selected template could not be read. Please select it again.',
 							value: 'invalid_template',
+						},
+					];
+				}
+
+				if (!template) {
+					return [
+						{
+							name: 'The selected template could not be found. Please select it again.',
+							value: 'template_not_found',
 						},
 					];
 				}
@@ -113,8 +132,8 @@ export class KippsAiWhatsappAgent implements INodeType {
 		},
 		resourceMapping: {
 			async getTemplateFields(this: ILoadOptionsFunctions): Promise<ResourceMapperFields> {
-				const templateRaw = this.getCurrentNodeParameter('templateName') as string;
-				if (!templateRaw) {
+				const templateName = this.getCurrentNodeParameter('templateName') as string;
+				if (!templateName) {
 					return { 
 						fields: [],
 						emptyFieldsNotice: '👆 Select a template above and wait for some time to see parameter fields here.',
@@ -123,9 +142,27 @@ export class KippsAiWhatsappAgent implements INodeType {
 
 				let template: any;
 				try {
-					template = JSON.parse(templateRaw);
+					const res = await this.helpers.httpRequestWithAuthentication.call(
+						this,
+						'kippsAiApi',
+						{
+							method: 'GET',
+							url: 'https://backend.kipps.ai/integrations/get-whatsapp-templates/',
+						},
+					);
+
+					const templates = (res || []).filter((t: any) => t?.status === 'APPROVED');
+					template = templates.find((t: any) => String(t.name) === templateName);
 				} catch (error) {
 					return { fields: [] };
+				}
+
+				if (!template) {
+					return {
+						fields: [],
+						emptyFieldsNotice:
+							'The selected template could not be found. Please re-open this node and select a template again.',
+					};
 				}
 
 				const body = template.components?.find((c: any) => c.type === 'BODY');
@@ -260,6 +297,12 @@ export class KippsAiWhatsappAgent implements INodeType {
 				description:
 					'Read-only preview of the selected template’s components (BODY, HEADER, BUTTONS, etc.). Open this after choosing a template to review what will be sent.',
 			},
+			{
+				displayName: 'Notice: If parameters don\'t update after 5 seconds, click the (⋮) menu on this field and select "Refresh fields".',
+				name: 'refreshNotice',
+				type: 'notice',
+				default: '',
+			},
 
 			{
 				displayName: 'Parameters',
@@ -307,15 +350,32 @@ export class KippsAiWhatsappAgent implements INodeType {
 		for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
 
 			const to = this.getNodeParameter('to', itemIndex) as string;
-			const templateRaw = this.getNodeParameter('templateName', itemIndex) as string;
+			const templateName = this.getNodeParameter('templateName', itemIndex) as string;
 
 			let template: any;
 			try {
-				template = JSON.parse(templateRaw);
+				const res = await this.helpers.httpRequestWithAuthentication.call(
+					this,
+					'kippsAiApi',
+					{
+						method: 'GET',
+						url: 'https://backend.kipps.ai/integrations/get-whatsapp-templates/',
+					},
+				);
+
+				const templates = (res || []).filter((t: any) => t?.status === 'APPROVED');
+				template = templates.find((t: any) => String(t.name) === templateName);
 			} catch (error) {
 				throw new NodeOperationError(
 					this.getNode(),
-					`Invalid template data. Please select a template from the dropdown.`,
+					`Could not load template details. Please try selecting the template again.`,
+				);
+			}
+
+			if (!template) {
+				throw new NodeOperationError(
+					this.getNode(),
+					`Selected template "${templateName}" was not found. Please re-select a template.`,
 				);
 			}
 
