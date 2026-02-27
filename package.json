@@ -22,13 +22,16 @@
     "whatsapp"
   ],
 
-  "author": "Kipps.AI",
+  "author": {
+		"name": "kipps.ai",
+		"email": "tech@kipps.ai"
+	},
 
   "bugs": {
     "url": "https://github.com/KIPPS-AI/n8n-node-kipps-whatsapp-agent/issues"
   },
 
-  "homepage": "https://github.com/KIPPS-AI/n8n-node-kipps-whatsapp-agent#readme",
+  "homepage": "https://kipps.ai",
 
   "files": [
     "dist"
