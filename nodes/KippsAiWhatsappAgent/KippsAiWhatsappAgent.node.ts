@@ -165,6 +165,7 @@ export class KippsAiWhatsappAgent implements INodeType {
 				required: true,
 				typeOptions: {
 					loadOptionsMethod: 'getTemplates',
+					reloadNodesOptions: true,
 				},
 				default: '',
 			},
