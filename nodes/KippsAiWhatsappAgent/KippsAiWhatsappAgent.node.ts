@@ -32,6 +32,84 @@ export class KippsAiWhatsappAgent implements INodeType {
 						value: JSON.stringify(t),
 					}));
 			},
+
+			async getTemplateComponentsPreview(
+				this: ILoadOptionsFunctions,
+			): Promise<INodePropertyOptions[]> {
+				const templateRaw = this.getCurrentNodeParameter('templateName') as string;
+
+				if (!templateRaw) {
+					return [
+						{
+							name: 'Select a template above to see its components.',
+							value: 'no_template',
+						},
+					];
+				}
+
+				let template: any;
+				try {
+					template = JSON.parse(templateRaw);
+				} catch {
+					return [
+						{
+							name: 'The selected template could not be read. Please select it again.',
+							value: 'invalid_template',
+						},
+					];
+				}
+
+				const components: any[] = Array.isArray(template.components) ? template.components : [];
+
+				if (!components.length) {
+					return [
+						{
+							name: 'This template has no components.',
+							value: 'no_components',
+						},
+					];
+				}
+
+				const options: INodePropertyOptions[] = [];
+
+				components.forEach((c, index) => {
+					const type = c?.type ?? 'UNKNOWN';
+
+					if (type === 'BODY') {
+						const text: string = c.text ?? '';
+						const short = text.length > 100 ? `${text.slice(0, 97)}…` : text;
+						options.push({
+							name: `${index + 1}. BODY – ${short || 'No body text'}`,
+							value: `BODY_${index}`,
+						});
+					} else if (type === 'HEADER') {
+						const format = c?.format ?? 'TEXT';
+						const text: string = c.text ?? '';
+						const short = text.length > 80 ? `${text.slice(0, 77)}…` : text;
+						options.push({
+							name: `${index + 1}. HEADER (${format})${short ? ` – ${short}` : ''}`,
+							value: `HEADER_${index}`,
+						});
+					} else if (type === 'BUTTONS') {
+						const buttons: any[] = Array.isArray(c.buttons) ? c.buttons : [];
+						const labels = buttons
+							.map((b: any) => b?.text)
+							.filter((t: string | undefined): t is string => !!t)
+							.join(', ');
+						options.push({
+							name: `${index + 1}. BUTTONS – ${labels || 'No button labels'}`,
+							value: `BUTTONS_${index}`,
+						});
+					} else {
+						options.push({
+							name: `${index + 1}. ${type}`,
+							value: `${type}_${index}`,
+						});
+					}
+				});
+
+				return options;
+			},
 		},
 		resourceMapping: {
 			async getTemplateFields(this: ILoadOptionsFunctions): Promise<ResourceMapperFields> {
@@ -170,26 +248,40 @@ export class KippsAiWhatsappAgent implements INodeType {
 				default: '',
 			},
 
-		{
-			displayName: 'Parameters',
-			name: 'mappedParameters',
-			type: 'resourceMapper',
-			noDataExpression: true,
-			default: {
-				mappingMode: 'defineBelow',
-				value: {},
+			{
+				displayName: 'Template Components (preview)',
+				name: 'templateComponentsPreview',
+				type: 'options',
+				typeOptions: {
+					loadOptionsDependsOn: ['templateName'],
+					loadOptionsMethod: 'getTemplateComponentsPreview',
+				},
+				default: '',
+				description:
+					'Read-only preview of the selected template’s components (BODY, HEADER, BUTTONS, etc.). Open this after choosing a template to review what will be sent.',
 			},
-			required: true,
-			description: 'Enter values for template parameters. Fields appear automatically after selecting a template above.',
-			typeOptions: {
-				resourceMapper: {
-					mode: 'map',
-					resourceMapperMethod: 'getTemplateFields',
-					supportAutoMap: false,
-					hideNoDataError: true,
+
+			{
+				displayName: 'Parameters',
+				name: 'mappedParameters',
+				type: 'resourceMapper',
+				noDataExpression: true,
+				default: {
+					mappingMode: 'defineBelow',
+					value: {},
+				},
+				required: true,
+				description:
+					'Enter values for template parameters. Fields appear automatically after selecting a template above. If they do not appear, click the three-dots menu (⋮) and choose "Refresh fields".',
+				typeOptions: {
+					resourceMapper: {
+						mode: 'map',
+						resourceMapperMethod: 'getTemplateFields',
+						supportAutoMap: false,
+						hideNoDataError: true,
+					},
 				},
 			},
-		},
 
 			{
 				displayName: 'Agent UUID',
