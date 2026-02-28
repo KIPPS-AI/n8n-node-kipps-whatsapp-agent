@@ -284,6 +284,12 @@ export class KippsAiWhatsappAgent implements INodeType {
 				},
 				default: '',
 			},
+			{
+				displayName: 'Please Refresh after selecting the template name to see updated paramters',
+				name: 'refreshNotice',
+				type: 'notice',
+				default: '',
+			},
 
 			{
 				displayName: 'Template Components (preview)',
@@ -295,15 +301,10 @@ export class KippsAiWhatsappAgent implements INodeType {
 				},
 				default: '',
 				description:
-					'Read-only preview of the selected template’s components (BODY, HEADER, BUTTONS, etc.). Open this after choosing a template to review what will be sent.',
+				'Read-only preview of the selected template’s components (BODY, HEADER, BUTTONS, etc.). Open this after choosing a template to review what will be sent.',
 			},
-			{
-				displayName: 'Notice: If parameters don\'t update after 10secs, click the (⋮) menu on this field and select "Refresh fields".for first time you should wait 1 min',
-				name: 'refreshNotice',
-				type: 'notice',
-				default: '',
-			},
-
+			
+			
 			{
 				displayName: 'Parameters',
 				name: 'mappedParameters',
