@@ -307,13 +307,7 @@ export class KippsAiWhatsappAgent implements INodeType {
 				},
 				default: '',
 			},
-			{
-				displayName: 'Please Refresh after selecting the template name to see updated paramters',
-				name: 'refreshNotice',
-				type: 'notice',
-				default: '',
-			},
-
+			
 			{
 				displayName: 'Template Components (preview)',
 				name: 'templateComponentsPreview',
