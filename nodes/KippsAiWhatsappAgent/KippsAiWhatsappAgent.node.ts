@@ -11,26 +11,50 @@ import type {
 
 import { NodeOperationError } from 'n8n-workflow';
 
+const TEMPLATES_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const templatesCache = new Map<string, { data: any[]; ts: number }>();
+
+async function getTemplatesCached(
+	cacheKey: string,
+	fetch: () => Promise<any[]>,
+): Promise<any[]> {
+	const now = Date.now();
+	const entry = templatesCache.get(cacheKey);
+	if (entry && now - entry.ts < TEMPLATES_CACHE_TTL_MS) {
+		return entry.data;
+	}
+	const data = await fetch();
+	templatesCache.set(cacheKey, { data, ts: now });
+	return data;
+}
+
+function getTemplatesCacheKey(creds: { organizationId?: string } | undefined): string {
+	return creds?.organizationId ?? 'default';
+}
+
 export class KippsAiWhatsappAgent implements INodeType {
 
 	methods = {
 		loadOptions: {
 			async getTemplates(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
-				const res = await this.helpers.httpRequestWithAuthentication.call(
-					this,
-					'kippsAiApi',
-					{
-						method: 'GET',
-						url: 'https://backend.kipps.ai/integrations/get-whatsapp-templates/',
-					},
-				);
+				const creds = (await this.getCredentials('kippsAiApi')) as { organizationId?: string } | undefined;
+				const cacheKey = getTemplatesCacheKey(creds);
+				const templates = await getTemplatesCached(cacheKey, async () => {
+					const res = await this.helpers.httpRequestWithAuthentication.call(
+						this,
+						'kippsAiApi',
+						{
+							method: 'GET',
+							url: 'https://backend.kipps.ai/integrations/get-whatsapp-templates/',
+						},
+					);
+					return (res || []).filter((t: any) => t?.status === 'APPROVED');
+				});
 
-				return (res || [])
-					.filter((t: any) => t?.status === 'APPROVED')
-					.map((t: any) => ({
-						name: String(t.name),
-						value: String(t.name),
-					}));
+				return templates.map((t: any) => ({
+					name: String(t.name),
+					value: String(t.name),
+				}));
 			},
 
 			async getTemplateComponentsPreview(
@@ -49,16 +73,19 @@ export class KippsAiWhatsappAgent implements INodeType {
 
 				let template: any;
 				try {
-					const res = await this.helpers.httpRequestWithAuthentication.call(
-						this,
-						'kippsAiApi',
-						{
-							method: 'GET',
-							url: 'https://backend.kipps.ai/integrations/get-whatsapp-templates/',
-						},
-					);
-
-					const templates = (res || []).filter((t: any) => t?.status === 'APPROVED');
+					const creds = (await this.getCredentials('kippsAiApi')) as { organizationId?: string } | undefined;
+					const cacheKey = getTemplatesCacheKey(creds);
+					const templates = await getTemplatesCached(cacheKey, async () => {
+						const res = await this.helpers.httpRequestWithAuthentication.call(
+							this,
+							'kippsAiApi',
+							{
+								method: 'GET',
+								url: 'https://backend.kipps.ai/integrations/get-whatsapp-templates/',
+							},
+						);
+						return (res || []).filter((t: any) => t?.status === 'APPROVED');
+					});
 					template = templates.find((t: any) => String(t.name) === templateName);
 				} catch {
 					return [
@@ -134,43 +161,38 @@ export class KippsAiWhatsappAgent implements INodeType {
 			async getTemplateFields(this: ILoadOptionsFunctions): Promise<ResourceMapperFields> {
 				const templateName = this.getCurrentNodeParameter('templateName') as string;
 				if (!templateName) {
-					return { 
+					return {
 						fields: [],
-						emptyFieldsNotice: '👆 Select a template above and wait for some time to see parameter fields here.',
 					};
 				}
 
 				let template: any;
 				try {
-					const res = await this.helpers.httpRequestWithAuthentication.call(
-						this,
-						'kippsAiApi',
-						{
-							method: 'GET',
-							url: 'https://backend.kipps.ai/integrations/get-whatsapp-templates/',
-						},
-					);
-
-					const templates = (res || []).filter((t: any) => t?.status === 'APPROVED');
+					const creds = (await this.getCredentials('kippsAiApi')) as { organizationId?: string } | undefined;
+					const cacheKey = getTemplatesCacheKey(creds);
+					const templates = await getTemplatesCached(cacheKey, async () => {
+						const res = await this.helpers.httpRequestWithAuthentication.call(
+							this,
+							'kippsAiApi',
+							{
+								method: 'GET',
+								url: 'https://backend.kipps.ai/integrations/get-whatsapp-templates/',
+							},
+						);
+						return (res || []).filter((t: any) => t?.status === 'APPROVED');
+					});
 					template = templates.find((t: any) => String(t.name) === templateName);
 				} catch (error) {
 					return { fields: [] };
 				}
 
 				if (!template) {
-					return {
-						fields: [],
-						emptyFieldsNotice:
-							'The selected template could not be found. Please re-open this node and select a template again.',
-					};
+					return { fields: [] };
 				}
 
 				const body = template.components?.find((c: any) => c.type === 'BODY');
 				if (!body) {
-					return { 
-						fields: [],
-						emptyFieldsNotice: 'This template has no message body with parameters.',
-					};
+					return { fields: [] };
 				}
 
 				const fields: ResourceMapperFields['fields'] = [];
@@ -349,13 +371,11 @@ export class KippsAiWhatsappAgent implements INodeType {
 		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
 
-		for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
-
-			const to = this.getNodeParameter('to', itemIndex) as string;
-			const templateName = this.getNodeParameter('templateName', itemIndex) as string;
-
-			let template: any;
-			try {
+		const creds = (await this.getCredentials('kippsAiApi')) as { organizationId?: string } | undefined;
+		const cacheKey = getTemplatesCacheKey(creds);
+		let templates: any[];
+		try {
+			templates = await getTemplatesCached(cacheKey, async () => {
 				const res = await this.helpers.httpRequestWithAuthentication.call(
 					this,
 					'kippsAiApi',
@@ -364,15 +384,21 @@ export class KippsAiWhatsappAgent implements INodeType {
 						url: 'https://backend.kipps.ai/integrations/get-whatsapp-templates/',
 					},
 				);
+				return (res || []).filter((t: any) => t?.status === 'APPROVED');
+			});
+		} catch (error) {
+			throw new NodeOperationError(
+				this.getNode(),
+				'Could not load template details. Please try selecting the template again.',
+			);
+		}
 
-				const templates = (res || []).filter((t: any) => t?.status === 'APPROVED');
-				template = templates.find((t: any) => String(t.name) === templateName);
-			} catch (error) {
-				throw new NodeOperationError(
-					this.getNode(),
-					`Could not load template details. Please try selecting the template again.`,
-				);
-			}
+		for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
+
+			const to = this.getNodeParameter('to', itemIndex) as string;
+			const templateName = this.getNodeParameter('templateName', itemIndex) as string;
+
+			const template = templates.find((t: any) => String(t.name) === templateName);
 
 			if (!template) {
 				throw new NodeOperationError(
