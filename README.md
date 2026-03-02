@@ -15,7 +15,7 @@ n8n community node for sending WhatsApp template messages via the Kipps.AI API, 
 
 ---
 
-## 📦 Installation
+## Installation
 
 ### n8n Cloud or modern self‑host (recommended)
 
