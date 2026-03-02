@@ -251,6 +251,7 @@ export class KippsAiWhatsappAgent implements INodeType {
 
 	description: INodeTypeDescription = {
 		displayName: 'Kipps.AI WhatsApp',
+		icon : 'file:KippsAiWhatsappAgent.svg',
 		name: 'kippsAiWhatsapp',
 		group: ['transform'],
 		version: 1,

@@ -11,7 +11,7 @@ export class KippsAiApi implements ICredentialType {
 	displayName = 'Kipps.AI API';
 
 	// change icon to whatsapp-related node icon if you have one
-	icon = 'file:../nodes/KippsAiWhatsappAgent/whatsapp.svg' as Icon;
+	icon = 'file:KippsAiWhatsappAgent.svg' as Icon;
 
 	documentationUrl = 'https://docs.kipps.ai/docs/v1.2.2/developer-api';
 
