@@ -341,6 +341,7 @@ export class KippsAiWhatsappAgent implements INodeType {
 				description:
 					'Enter values for template parameters. Fields appear automatically after selecting a template above. If they do not appear, click the three-dots menu (⋮) and choose "Refresh fields".',
 				typeOptions: {
+					loadOptionsDependsOn: ['templateName'],
 					resourceMapper: {
 						mode: 'map',
 						resourceMapperMethod: 'getTemplateFields',
