@@ -20,6 +20,7 @@ export class KippsAiApi implements ICredentialType {
 			displayName: 'Bearer Token',
 			name: 'bearerToken',
 			type: 'string',
+			required : true,
 			typeOptions: {
 				password: true,
 			},
