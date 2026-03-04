@@ -29,6 +29,11 @@
     "dist"
   ],
   "n8n": {
+    "displayName": "Kipps.AI WhatsApp Agent",
+    "icon": "file:nodes/KippsAiWhatsappAgent/KippsAiWhatsappAgent.svg",
+    "categories": [
+      "Communication"
+    ],
     "nodes": [
       "dist/nodes/KippsAiWhatsappAgent/KippsAiWhatsappAgent.node.js"
     ],
