@@ -568,7 +568,7 @@ export class KippsAiWhatsappAgent implements INodeType {
 					});
 					continue;
 				}
-				throw error;
+				throw new NodeOperationError(this.getNode(), error as Error, { itemIndex });
 			}
 		}
 

@@ -3,15 +3,7 @@
   "version": "1.0.8",
   "description": "n8n node for sending WhatsApp template messages via Kipps.AI",
   "license": "MIT",
-  "main": "dist/index.js",
-  "scripts": {
-    "build": "tsc && cpx \"nodes/**/*.svg\" dist/nodes",
-    "dev": "tsc --watch"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/KIPPS-AI/n8n-node-kipps-whatsapp-agent.git"
-  },
+  "homepage": "https://kipps.ai",
   "keywords": [
     "n8n-community-node-package",
     "kipps",
@@ -21,14 +13,19 @@
     "name": "kipps.ai",
     "email": "tech@kipps.ai"
   },
-  "bugs": {
-    "url": "https://github.com/KIPPS-AI/n8n-node-kipps-whatsapp-agent/issues"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KIPPS-AI/n8n-node-kipps-whatsapp-agent.git"
   },
-  "homepage": "https://kipps.ai",
+  "scripts": {
+  "build": "tsc && cpx \"nodes/**/*.svg\" dist/nodes",
+  "dev": "tsc --watch"
+  },
   "files": [
     "dist"
   ],
   "n8n": {
+    "n8nNodesApiVersion": 1,
     "displayName": "Kipps.AI WhatsApp Agent",
     "icon": "file:nodes/KippsAiWhatsappAgent/KippsAiWhatsappAgent.svg",
     "categories": [
@@ -40,6 +37,10 @@
     "credentials": [
       "dist/credentials/KippsAiApi.credentials.js"
     ]
+  },
+  "main": "dist/index.js",
+  "bugs": {
+    "url": "https://github.com/KIPPS-AI/n8n-node-kipps-whatsapp-agent/issues"
   },
   "devDependencies": {
     "@types/node": "^25.3.0",
