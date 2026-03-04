@@ -18,8 +18,11 @@
     "url": "git+https://github.com/KIPPS-AI/n8n-node-kipps-whatsapp-agent.git"
   },
   "scripts": {
-    "build": "tsc && cpx \"nodes/**/*.svg\" dist/nodes",
-    "dev": "tsc --watch"
+    "dev": "n8n-node dev",
+    "build": "n8n-node build",
+    "lint": "n8n-node lint",
+    "lint:fix": "n8n-node lint --fix",
+    "release": "n8n-node release"
   },
   "files": [
     "dist"
@@ -43,6 +46,7 @@
     "url": "https://github.com/KIPPS-AI/n8n-node-kipps-whatsapp-agent/issues"
   },
   "devDependencies": {
+    "@n8n/node-cli": "^0.22.0",
     "@types/node": "^25.3.0",
     "cpx": "^1.5.0",
     "typescript": "^5.9.3"
