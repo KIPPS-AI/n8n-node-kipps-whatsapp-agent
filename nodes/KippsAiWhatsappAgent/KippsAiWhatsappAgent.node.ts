@@ -8,17 +8,16 @@ import {
 	INodePropertyOptions,
 	ResourceMapperFields,
 	NodeConnectionTypes,
+	NodeOperationError,
 } from 'n8n-workflow';
 
-import { NodeOperationError } from 'n8n-workflow';
-
 const TEMPLATES_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-const templatesCache = new Map<string, { data: any[]; ts: number }>();
+const templatesCache = new Map<string, { data: unknown[]; ts: number }>();
 
 async function getTemplatesCached(
 	cacheKey: string,
-	fetch: () => Promise<any[]>,
-): Promise<any[]> {
+	fetch: () => Promise<unknown[]>,
+): Promise<unknown[]> {
 	const now = Date.now();
 	const entry = templatesCache.get(cacheKey);
 	if (entry && now - entry.ts < TEMPLATES_CACHE_TTL_MS) {
@@ -34,13 +33,14 @@ function getTemplatesCacheKey(creds: { organizationId?: string } | undefined): s
 }
 
 export class KippsAiWhatsappAgent implements INodeType {
+	usableAsTool = true;
 
 	methods = {
 		loadOptions: {
 			async getTemplates(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
 				const creds = (await this.getCredentials('kippsAiApi')) as { organizationId?: string } | undefined;
 				const cacheKey = getTemplatesCacheKey(creds);
-				const templates = await getTemplatesCached(cacheKey, async () => {
+				const templates = (await getTemplatesCached(cacheKey, async () => {
 					const res = await this.helpers.httpRequestWithAuthentication.call(
 						this,
 						'kippsAiApi',
@@ -49,10 +49,13 @@ export class KippsAiWhatsappAgent implements INodeType {
 							url: 'https://backend.kipps.ai/integrations/get-whatsapp-templates/',
 						},
 					);
-					return (res || []).filter((t: any) => t?.status === 'APPROVED');
-				});
+					const list = Array.isArray(res) ? res : [];
+					return list.filter(
+						(t) => (t as { status?: string }).status === 'APPROVED',
+					);
+				})) as Array<{ name?: string }>;
 
-				return templates.map((t: any) => ({
+				return templates.map((t) => ({
 					name: String(t.name),
 					value: String(t.name),
 				}));
@@ -66,17 +69,17 @@ export class KippsAiWhatsappAgent implements INodeType {
 				if (!templateName) {
 					return [
 						{
-							name: 'Select a template above to see its components.',
+							name: 'Select a Template Above to See Its Components.',
 							value: 'no_template',
 						},
 					];
 				}
 
-				let template: any;
+				let template;
 				try {
 					const creds = (await this.getCredentials('kippsAiApi')) as { organizationId?: string } | undefined;
 					const cacheKey = getTemplatesCacheKey(creds);
-					const templates = await getTemplatesCached(cacheKey, async () => {
+					const templates = (await getTemplatesCached(cacheKey, async () => {
 						const res = await this.helpers.httpRequestWithAuthentication.call(
 							this,
 							'kippsAiApi',
@@ -85,13 +88,16 @@ export class KippsAiWhatsappAgent implements INodeType {
 								url: 'https://backend.kipps.ai/integrations/get-whatsapp-templates/',
 							},
 						);
-						return (res || []).filter((t: any) => t?.status === 'APPROVED');
-					});
-					template = templates.find((t: any) => String(t.name) === templateName);
+						const list = Array.isArray(res) ? res : [];
+						return list.filter(
+							(t) => (t as { status?: string }).status === 'APPROVED',
+						);
+					})) as Array<{ name?: string; components?: unknown }>;
+					template = templates.find((t) => String(t.name) === templateName);
 				} catch {
 					return [
 						{
-							name: 'The selected template could not be read. Please select it again.',
+							name: 'The Selected Template Could Not Be Read. Please Select It Again.',
 							value: 'invalid_template',
 						},
 					];
@@ -100,18 +106,18 @@ export class KippsAiWhatsappAgent implements INodeType {
 				if (!template) {
 					return [
 						{
-							name: 'The selected template could not be found. Please select it again.',
+							name: 'The Selected Template Could Not Be Found. Please Select It Again.',
 							value: 'template_not_found',
 						},
 					];
 				}
 
-				const components: any[] = Array.isArray(template.components) ? template.components : [];
+				const components = Array.isArray(template.components) ? template.components : [];
 
 				if (!components.length) {
 					return [
 						{
-							name: 'This template has no components.',
+							name: 'This Template Has No Components.',
 							value: 'no_components',
 						},
 					];
@@ -138,9 +144,9 @@ export class KippsAiWhatsappAgent implements INodeType {
 							value: `HEADER_${index}`,
 						});
 					} else if (type === 'BUTTONS') {
-						const buttons: any[] = Array.isArray(c.buttons) ? c.buttons : [];
+						const buttons = Array.isArray(c.buttons) ? c.buttons : [];
 						const labels = buttons
-							.map((b: any) => b?.text)
+							.map((b: { text?: string }) => b.text)
 							.filter((t: string | undefined): t is string => !!t)
 							.join(', ');
 						options.push({
@@ -167,11 +173,26 @@ export class KippsAiWhatsappAgent implements INodeType {
 					};
 				}
 
-				let template: any;
+				let template:
+					| {
+							name?: string;
+							parameter_format?: string;
+							components?: Array<{
+								type?: string;
+								text?: string;
+								format?: string;
+								buttons?: Array<{ text?: string }>;
+								example?: {
+									body_text_named_params?: Array<{ param_name?: string; example?: string }>;
+									body_text?: string[][];
+								};
+							}>;
+					  }
+					| undefined;
 				try {
 					const creds = (await this.getCredentials('kippsAiApi')) as { organizationId?: string } | undefined;
 					const cacheKey = getTemplatesCacheKey(creds);
-					const templates = await getTemplatesCached(cacheKey, async () => {
+					const templates = (await getTemplatesCached(cacheKey, async () => {
 						const res = await this.helpers.httpRequestWithAuthentication.call(
 							this,
 							'kippsAiApi',
@@ -180,10 +201,13 @@ export class KippsAiWhatsappAgent implements INodeType {
 								url: 'https://backend.kipps.ai/integrations/get-whatsapp-templates/',
 							},
 						);
-						return (res || []).filter((t: any) => t?.status === 'APPROVED');
-					});
-					template = templates.find((t: any) => String(t.name) === templateName);
-				} catch (error) {
+						const list = Array.isArray(res) ? res : [];
+						return list.filter(
+							(t) => (t as { status?: string }).status === 'APPROVED',
+						);
+					})) as Array<{ name?: string; components?: Array<{ type?: string; text?: string; format?: string; buttons?: Array<{ text?: string }> }> }>;
+					template = templates.find((t) => String(t.name) === templateName);
+				} catch {
 					return { fields: [] };
 				}
 
@@ -191,7 +215,17 @@ export class KippsAiWhatsappAgent implements INodeType {
 					return { fields: [] };
 				}
 
-				const body = template.components?.find((c: any) => c.type === 'BODY');
+				const body = template.components?.find(
+					(c) => (c as { type?: string }).type === 'BODY',
+				) as
+					| {
+							text?: string;
+							example?: {
+								body_text_named_params?: Array<{ param_name?: string; example?: string }>;
+								body_text?: string[][];
+							};
+					  }
+					| undefined;
 				if (!body) {
 					return { fields: [] };
 				}
@@ -338,7 +372,7 @@ export class KippsAiWhatsappAgent implements INodeType {
 			},
 
 			{
-				displayName: 'Template Name',
+				displayName: 'Template Name or ID',
 				name: 'templateName',
 				type: 'options',
 				required: true,
@@ -348,6 +382,8 @@ export class KippsAiWhatsappAgent implements INodeType {
 						operation: ['sendTemplate'],
 					},
 				},
+				description:
+					'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 				typeOptions: {
 					loadOptionsMethod: 'getTemplates',
 				},
@@ -355,7 +391,7 @@ export class KippsAiWhatsappAgent implements INodeType {
 			},
 			
 			{
-				displayName: 'Template Components (Preview)',
+				displayName: 'Template Components Name or ID',
 				name: 'templateComponentsPreview',
 				type: 'options',
 				displayOptions: {
@@ -370,7 +406,7 @@ export class KippsAiWhatsappAgent implements INodeType {
 				},
 				default: '',
 				description:
-				'Read-only preview of the selected template’s components (BODY, HEADER, BUTTONS, etc.). Open this after choosing a template to review what will be sent.',
+					'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 			},
 			
 			
@@ -443,14 +479,17 @@ export class KippsAiWhatsappAgent implements INodeType {
 
 		const creds = (await this.getCredentials('kippsAiApi')) as { organizationId?: string } | undefined;
 		const cacheKey = getTemplatesCacheKey(creds);
-		let templates: any[];
+		let templates: unknown[];
 		try {
 			templates = await getTemplatesCached(cacheKey, async () => {
 				const res = await this.helpers.httpRequestWithAuthentication.call(this, 'kippsAiApi', {
 					method: 'GET',
 					url: 'https://backend.kipps.ai/integrations/get-whatsapp-templates/',
 				});
-				return (res || []).filter((t: any) => t?.status === 'APPROVED');
+				const list = Array.isArray(res) ? res : [];
+				return list.filter(
+					(t) => (t as { status?: string }).status === 'APPROVED',
+				);
 			});
 		} catch (error) {
 			throw new NodeOperationError(
@@ -467,7 +506,9 @@ export class KippsAiWhatsappAgent implements INodeType {
 						const to = this.getNodeParameter('to', itemIndex) as string;
 						const templateName = this.getNodeParameter('templateName', itemIndex) as string;
 
-						const template = templates.find((t: any) => String(t.name) === templateName);
+						const template = (templates as Array<{ name?: string; components?: unknown[]; parameter_format?: string }>).find(
+							(t) => String(t.name) === templateName,
+						);
 
 						if (!template) {
 							throw new NodeOperationError(
@@ -478,14 +519,14 @@ export class KippsAiWhatsappAgent implements INodeType {
 						}
 
 						const mapped = this.getNodeParameter('mappedParameters', itemIndex) as {
-							value: Record<string, any>;
+							value: Record<string, unknown>;
 						};
 
 						const values = mapped?.value || {};
 
 						/* VALIDATION */
 						const empty = Object.entries(values)
-							.filter(([_, v]) => !v || v === '')
+							.filter(([, v]) => v === undefined || v === null || v === '')
 							.map(([k]) => k);
 
 						if (empty.length) {
@@ -496,18 +537,35 @@ export class KippsAiWhatsappAgent implements INodeType {
 							);
 						}
 
-						let parameters: any;
+						let parameters:
+							| {
+									body: Array<{ name: string; value: string }>;
+							  }
+							| {
+									body: string[];
+							  };
 
 						if (template.parameter_format === 'NAMED') {
 							// Convert to { body: [{ name, value }, ...] } format
-							const body = template.components?.find((c: any) => c.type === 'BODY');
-							const namedParams = body?.example?.body_text_named_params || [];
+						const body = template.components?.find(
+							(c) => (c as { type?: string }).type === 'BODY',
+						) as
+							| {
+									example?: {
+										body_text_named_params?: Array<{ param_name?: string }>;
+									};
+							  }
+							| undefined;
+						const namedParams = body?.example?.body_text_named_params || [];
 
 							parameters = {
-								body: namedParams.map((p: any) => ({
-									name: p.param_name,
-									value: values[p.param_name] || '',
-								})),
+								body: namedParams.map((p: { param_name?: string }) => {
+									const paramName = p.param_name ?? '';
+									return {
+										name: paramName,
+										value: String(values[paramName] ?? ''),
+									};
+								}),
 							};
 						} else {
 							// POSITIONAL: Convert to { body: ["val1", "val2", ...] } format
@@ -518,7 +576,7 @@ export class KippsAiWhatsappAgent implements INodeType {
 										const bNum = Number(b.split('_')[1]);
 										return aNum - bNum;
 									})
-									.map((k) => values[k]),
+									.map((k) => String(values[k] ?? '')),
 							};
 						}
 
@@ -527,9 +585,22 @@ export class KippsAiWhatsappAgent implements INodeType {
 							conversation_id?: string;
 						};
 
-						const body: any = {
+						const body: {
+							to: string;
+							template_name: string;
+							template_components: unknown[] | undefined;
+							parameters:
+								| {
+										body: Array<{ name: string; value: string }>;
+								  }
+								| {
+										body: string[];
+								  };
+							agent_uuid?: string;
+							conversation_id?: string;
+						} = {
 							to,
-							template_name: template.name,
+							template_name: template.name ?? '',
 							template_components: template.components || [],
 							parameters,
 						};
