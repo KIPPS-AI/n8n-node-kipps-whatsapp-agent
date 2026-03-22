@@ -29,21 +29,12 @@
   ],
   "n8n": {
     "n8nNodesApiVersion": 1,
-    "displayName": "Kipps.AI WhatsApp Agent",
-    "icon": "file:nodes/KippsAiWhatsappAgent/KippsAiWhatsappAgent.svg",
-    "categories": [
-      "Communication"
-    ],
     "nodes": [
       "dist/nodes/KippsAiWhatsappAgent/KippsAiWhatsappAgent.node.js"
     ],
     "credentials": [
       "dist/credentials/KippsAiApi.credentials.js"
     ]
-  },
-  "main": "dist/index.js",
-  "bugs": {
-    "url": "https://github.com/KIPPS-AI/n8n-node-kipps-whatsapp-agent/issues"
   },
   "devDependencies": {
     "@n8n/node-cli": "^0.22.0",
