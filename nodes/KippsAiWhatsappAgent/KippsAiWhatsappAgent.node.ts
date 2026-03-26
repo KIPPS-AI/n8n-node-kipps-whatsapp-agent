@@ -302,7 +302,7 @@ export class KippsAiWhatsappAgent implements INodeType {
 				if (fields.length === 0) {
 					return {
 						fields: [],
-						emptyFieldsNotice: '✅ This template has no parameters to fill. The message will be sent as-is.',
+						emptyFieldsNotice: 'This template has no parameters to fill. The message will be sent as-is.',
 					};
 				}
 
