@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-kipps-whatsapp-agent",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "n8n node for sending WhatsApp template messages via Kipps.AI",
   "license": "MIT",
   "homepage": "https://kipps.ai",
