@@ -9,8 +9,6 @@ import type {
 export class KippsAiApi implements ICredentialType {
 	name = 'kippsAiApi';
 	displayName = 'Kipps.AI API';
-
-	// change icon to whatsapp-related node icon if you have one
 	icon = 'file:KippsAiWhatsappAgent.svg' as Icon;
 
 	documentationUrl = 'https://docs.kipps.ai/docs/v1.2.2/developer-api';
@@ -51,7 +49,6 @@ export class KippsAiApi implements ICredentialType {
 
 	test: ICredentialTestRequest = {
 		request: {
-			// url: 'https://backend.kipps.ai/test/',
 			url : "https://backend.kipps.ai/integrations/get-whatsapp-templates/",
 		},
 	};
