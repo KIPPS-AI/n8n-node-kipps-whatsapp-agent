@@ -312,6 +312,7 @@ export class KippsAiWhatsappAgent implements INodeType {
 		displayName: 'Kipps.AI WhatsApp',
 		icon : 'file:KippsAiWhatsappAgent.svg',
 		name: 'kippsAiWhatsapp',
+		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
 		group: ['transform'],
 		version: 1,
 		description: 'Send WhatsApp template message using Kipps.AI with dynamic parameter fields',
