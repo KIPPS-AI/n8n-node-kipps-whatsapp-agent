@@ -8,7 +8,9 @@ import {
 	INodePropertyOptions,
 	ResourceMapperFields,
 	NodeConnectionTypes,
+	NodeApiError,
 	NodeOperationError,
+	JsonObject,
 } from 'n8n-workflow';
 
 const TEMPLATES_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -492,9 +494,9 @@ export class KippsAiWhatsappAgent implements INodeType {
 				);
 			});
 		} catch (error) {
-			throw new NodeOperationError(
+			throw new NodeApiError(
 				this.getNode(),
-				error as Error,
+				error as JsonObject,
 				{ message: 'Could not load template details. Please try selecting the template again.' }
 			);
 		}
@@ -639,7 +641,10 @@ export class KippsAiWhatsappAgent implements INodeType {
 					});
 					continue;
 				}
-				throw new NodeOperationError(this.getNode(), error as Error, { itemIndex });
+				if (error instanceof NodeOperationError) {
+					throw error;
+				}
+				throw new NodeApiError(this.getNode(), error as JsonObject, { itemIndex });
 			}
 		}
 
