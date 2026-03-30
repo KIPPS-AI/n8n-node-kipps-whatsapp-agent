@@ -14,20 +14,21 @@ import {
 } from 'n8n-workflow';
 
 const TEMPLATES_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-const templatesCache = new Map<string, { data: unknown[]; ts: number }>();
 type KippsApiCredentials = { bearerToken?: string; organizationId?: string };
+type TemplatesCache = Map<string, { data: unknown[]; ts: number }>;
 
 async function getTemplatesCached(
+	cache: TemplatesCache,
 	cacheKey: string,
 	fetch: () => Promise<unknown[]>,
 ): Promise<unknown[]> {
 	const now = Date.now();
-	const entry = templatesCache.get(cacheKey);
+	const entry = cache.get(cacheKey);
 	if (entry && now - entry.ts < TEMPLATES_CACHE_TTL_MS) {
 		return entry.data;
 	}
 	const data = await fetch();
-	templatesCache.set(cacheKey, { data, ts: now });
+	cache.set(cacheKey, { data, ts: now });
 	return data;
 }
 
@@ -40,12 +41,14 @@ function getTemplatesCacheKey(creds: KippsApiCredentials | undefined): string {
 export class KippsAiWhatsappAgent implements INodeType {
 	usableAsTool = true;
 
-	methods = {
+	methods = (() => {
+		const templatesCacheUi: TemplatesCache = new Map();
+		return {
 		loadOptions: {
 			async getTemplates(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
 				const creds = (await this.getCredentials('kippsAiApi')) as KippsApiCredentials | undefined;
 				const cacheKey = getTemplatesCacheKey(creds);
-				const templates = (await getTemplatesCached(cacheKey, async () => {
+				const templates = (await getTemplatesCached(templatesCacheUi, cacheKey, async () => {
 					const res = await this.helpers.httpRequestWithAuthentication.call(
 						this,
 						'kippsAiApi',
@@ -84,7 +87,7 @@ export class KippsAiWhatsappAgent implements INodeType {
 				try {
 					const creds = (await this.getCredentials('kippsAiApi')) as KippsApiCredentials | undefined;
 					const cacheKey = getTemplatesCacheKey(creds);
-					const templates = (await getTemplatesCached(cacheKey, async () => {
+					const templates = (await getTemplatesCached(templatesCacheUi, cacheKey, async () => {
 						const res = await this.helpers.httpRequestWithAuthentication.call(
 							this,
 							'kippsAiApi',
@@ -197,7 +200,7 @@ export class KippsAiWhatsappAgent implements INodeType {
 				try {
 					const creds = (await this.getCredentials('kippsAiApi')) as KippsApiCredentials | undefined;
 					const cacheKey = getTemplatesCacheKey(creds);
-					const templates = (await getTemplatesCached(cacheKey, async () => {
+					const templates = (await getTemplatesCached(templatesCacheUi, cacheKey, async () => {
 						const res = await this.helpers.httpRequestWithAuthentication.call(
 							this,
 							'kippsAiApi',
@@ -310,6 +313,7 @@ export class KippsAiWhatsappAgent implements INodeType {
 			},
 		},
 	};
+	})();
 
 	description: INodeTypeDescription = {
 		displayName: 'Kipps.AI WhatsApp',
@@ -483,11 +487,12 @@ export class KippsAiWhatsappAgent implements INodeType {
 		const resource = this.getNodeParameter('resource', 0) as string;
 		const operation = this.getNodeParameter('operation', 0) as string;
 
+		const templatesCacheRun: TemplatesCache = new Map();
 		const creds = (await this.getCredentials('kippsAiApi')) as KippsApiCredentials | undefined;
 		const cacheKey = getTemplatesCacheKey(creds);
 		let templates: unknown[];
 		try {
-			templates = await getTemplatesCached(cacheKey, async () => {
+			templates = await getTemplatesCached(templatesCacheRun, cacheKey, async () => {
 				const res = await this.helpers.httpRequestWithAuthentication.call(this, 'kippsAiApi', {
 					method: 'GET',
 					url: 'https://backend.kipps.ai/integrations/get-whatsapp-templates/',

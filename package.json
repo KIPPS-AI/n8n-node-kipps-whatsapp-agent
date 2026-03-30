@@ -17,6 +17,10 @@
     "type": "git",
     "url": "git+https://github.com/KIPPS-AI/n8n-node-kipps-whatsapp-agent.git"
   },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "dev": "n8n-node dev",
     "build": "n8n-node build",
